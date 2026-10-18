@@ -4,36 +4,57 @@ import { AuthLayout } from '../../../layouts/AuthLayout';
 export const AccessDeniedPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Access Restricted"
+      tag="ACCESS STATUS"
+      title="Access restricted"
       subtitle="Your account does not have permission to view this resource."
     >
-      <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }} role="img" aria-label="Lock">
-          🔒
-        </div>
-        <p style={{ color: 'var(--muted-text)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          This portal enforces project boundary isolation. If your account is suspended or you require access
+      <div style={containerStyle}>
+        <p style={descriptionStyle}>
+          This portal enforces strict project boundary isolation. If your account is suspended or you require access
           to a specific project, please contact Stephen.
         </p>
-        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={actionContainerStyle}>
           <button
             onClick={() => {
               window.location.href = '/sign-in';
             }}
-            style={{
-              backgroundColor: 'var(--primary)',
-              color: '#FFFFFF',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
+            style={primaryButtonStyle}
           >
-            Sign In with Different Account
+            Sign in with different account
           </button>
         </div>
       </div>
     </AuthLayout>
   );
+};
+
+const containerStyle: React.CSSProperties = {
+  textAlign: 'left',
+};
+
+const descriptionStyle: React.CSSProperties = {
+  color: 'var(--muted-text)',
+  fontSize: '0.875rem',
+  lineHeight: 1.6,
+  margin: '0 0 1.75rem 0',
+};
+
+const actionContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.85rem',
+  alignItems: 'stretch',
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  backgroundColor: 'var(--primary)',
+  color: '#FFFFFF',
+  padding: '0.875rem',
+  borderRadius: '8px',
+  border: 'none',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '0.9375rem',
+  width: '100%',
+  textAlign: 'center',
 };

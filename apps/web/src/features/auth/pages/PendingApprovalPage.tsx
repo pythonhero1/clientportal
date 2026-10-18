@@ -4,29 +4,19 @@ import { AuthLayout } from '../../../layouts/AuthLayout';
 export const PendingApprovalPage: React.FC = () => {
   return (
     <AuthLayout
-      title="Account Pending Approval"
-      subtitle="Stephen reviews and activates all new client accounts before project access is granted."
+      tag="ACCESS STATUS"
+      title="Approval pending"
+      subtitle="Your registration is confirmed. Stephen reviews and activates all new client accounts before project access is granted."
     >
-      <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }} role="img" aria-label="Hourglass">
-          ⏳
-        </div>
-        <p style={{ color: 'var(--muted-text)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          Your registration is confirmed. In accordance with portal security policies, access to project files,
-          conversations, and billing remains gated until Owner activation.
+      <div style={containerStyle}>
+        <p style={descriptionStyle}>
+          In accordance with portal security policies, access to project files,
+          conversations, invoices, and deliverables remains gated until Owner activation.
         </p>
-        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={actionContainerStyle}>
           <a
             href="mailto:stephen@oderindestephen.com"
-            style={{
-              display: 'inline-block',
-              backgroundColor: 'var(--primary)',
-              color: '#FFFFFF',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
+            style={primaryButtonStyle}
           >
             Contact Stephen
           </a>
@@ -34,20 +24,53 @@ export const PendingApprovalPage: React.FC = () => {
             onClick={() => {
               window.location.href = '/sign-in';
             }}
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              padding: '0.65rem 1.25rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 500,
-            }}
+            style={secondaryButtonStyle}
           >
-            Return to Sign In
+            Return to sign in &rarr;
           </button>
         </div>
       </div>
     </AuthLayout>
   );
+};
+
+const containerStyle: React.CSSProperties = {
+  textAlign: 'left',
+};
+
+const descriptionStyle: React.CSSProperties = {
+  color: 'var(--muted-text)',
+  fontSize: '0.875rem',
+  lineHeight: 1.6,
+  margin: '0 0 1.75rem 0',
+};
+
+const actionContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.85rem',
+  alignItems: 'stretch',
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  display: 'inline-block',
+  backgroundColor: 'var(--primary)',
+  color: '#FFFFFF',
+  padding: '0.875rem',
+  borderRadius: '8px',
+  fontWeight: 600,
+  textAlign: 'center',
+  textDecoration: 'none',
+  fontSize: '0.9375rem',
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--primary-link)',
+  padding: '0.5rem',
+  cursor: 'pointer',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  textAlign: 'center',
 };

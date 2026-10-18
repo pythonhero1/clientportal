@@ -3,11 +3,17 @@ import '../styles/tokens.css';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  tag?: string;
   title?: string;
   subtitle?: string;
 }
 
-export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
+export const AuthLayout: React.FC<AuthLayoutProps> = ({
+  children,
+  tag,
+  title,
+  subtitle,
+}) => {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
@@ -25,20 +31,34 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
     <div style={containerStyle}>
       <header style={headerStyle}>
         <div style={brandStyle}>
-          <span style={logoBadgeStyle}>OS</span>
-          <span style={brandTextStyle}>Oderinde Stephen Portal</span>
+          <img
+            src="/logo.png"
+            alt="Oderinde Stephen Logo"
+            style={logoImageStyle}
+          />
+          <div style={brandInfoStyle}>
+            <span style={brandNameStyle}>ODERINDE STEPHEN</span>
+            <span style={brandSubtitleStyle}>CLIENT PORTAL</span>
+          </div>
         </div>
-        <button
-          onClick={toggleTheme}
-          style={themeToggleStyle}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
-        </button>
+
+        <div style={headerRightStyle}>
+          <div style={securityBadgeStyle}>
+            SECURE CLIENT ACCESS
+          </div>
+          <button
+            onClick={toggleTheme}
+            style={themeToggleStyle}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? 'LIGHT' : 'DARK'}
+          </button>
+        </div>
       </header>
 
       <main style={mainContentStyle}>
         <div style={cardStyle}>
+          {tag && <div style={tagStyle}>{tag}</div>}
           {title && <h1 style={titleStyle}>{title}</h1>}
           {subtitle && <p style={subtitleStyle}>{subtitle}</p>}
           <div style={contentAreaStyle}>{children}</div>
@@ -67,41 +87,76 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '1.25rem 2rem',
-  borderBottom: '1px solid var(--border)',
+  padding: '1.5rem 2.5rem',
+  border: 'none',
 };
 
 const brandStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '0.75rem',
+  gap: '0.85rem',
 };
 
-const logoBadgeStyle: React.CSSProperties = {
-  backgroundColor: 'var(--primary)',
-  color: '#FFFFFF',
+const logoImageStyle: React.CSSProperties = {
+  width: '38px',
+  height: '38px',
+  borderRadius: '8px',
+  objectFit: 'cover',
+  display: 'block',
+};
+
+const brandInfoStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  lineHeight: 1.2,
+};
+
+const brandNameStyle: React.CSSProperties = {
   fontWeight: 700,
   fontSize: '0.875rem',
-  padding: '0.35rem 0.6rem',
-  borderRadius: '6px',
-  letterSpacing: '0.05em',
+  letterSpacing: '0.06em',
+  color: 'var(--text)',
+  textTransform: 'uppercase',
 };
 
-const brandTextStyle: React.CSSProperties = {
+const brandSubtitleStyle: React.CSSProperties = {
   fontWeight: 600,
-  fontSize: '1rem',
-  color: 'var(--text)',
+  fontSize: '0.6875rem',
+  letterSpacing: '0.08em',
+  color: 'var(--accent-cyan)',
+  textTransform: 'uppercase',
+  marginTop: '2px',
+};
+
+const headerRightStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '1rem',
+};
+
+const securityBadgeStyle: React.CSSProperties = {
+  border: '1px solid var(--badge-border)',
+  backgroundColor: 'var(--badge-bg)',
+  color: 'var(--badge-text)',
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  padding: '0.4rem 0.9rem',
+  borderRadius: '9999px',
 };
 
 const themeToggleStyle: React.CSSProperties = {
-  background: 'var(--surface-raised)',
-  color: 'var(--text)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  padding: '0.5rem 0.85rem',
+  background: 'transparent',
+  color: 'var(--muted-text)',
+  border: 'none',
+  padding: '0.4rem 0.6rem',
   cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: 500,
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  borderRadius: '6px',
+  transition: 'color 0.15s ease',
 };
 
 const mainContentStyle: React.CSSProperties = {
@@ -109,43 +164,55 @@ const mainContentStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '2rem 1rem',
+  padding: '2rem 1.5rem',
 };
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: '28rem', // ~448px matching desktop Figma card
+  maxWidth: '28rem',
   backgroundColor: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  padding: '2rem',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+  borderRadius: '18px',
+  padding: '2.5rem 2.25rem',
+  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+  border: 'none',
+  textAlign: 'left',
+};
+
+const tagStyle: React.CSSProperties = {
+  color: 'var(--primary-link)',
+  fontSize: '0.6875rem',
+  fontWeight: 700,
+  letterSpacing: '0.09em',
+  textTransform: 'uppercase',
+  marginBottom: '0.6rem',
+  textAlign: 'left',
 };
 
 const titleStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
+  fontSize: '1.75rem',
   fontWeight: 700,
   margin: '0 0 0.5rem 0',
   color: 'var(--text)',
-  textAlign: 'center',
+  textAlign: 'left',
+  letterSpacing: '-0.02em',
 };
 
 const subtitleStyle: React.CSSProperties = {
   fontSize: '0.875rem',
   color: 'var(--muted-text)',
-  margin: '0 0 1.5rem 0',
-  textAlign: 'center',
+  margin: '0 0 1.75rem 0',
+  textAlign: 'left',
   lineHeight: 1.5,
 };
 
 const contentAreaStyle: React.CSSProperties = {
-  marginTop: '1rem',
+  textAlign: 'left',
 };
 
 const footerStyle: React.CSSProperties = {
   textAlign: 'center',
   padding: '1.5rem',
-  borderTop: '1px solid var(--border)',
+  border: 'none',
 };
 
 const footerTextStyle: React.CSSProperties = {

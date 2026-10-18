@@ -48,15 +48,16 @@ export const SignUpPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Create Your Account"
-      subtitle="Join the Oderinde Stephen Client Portal to collaborate on your projects."
+      tag="CLIENT WORKSPACE"
+      title="Create your account"
+      subtitle="Join your dedicated client workspace to view active projects, files, and deliverables."
     >
       <form onSubmit={handleSubmit} style={formStyle}>
         {error && <div style={errorBannerStyle}>{error}</div>}
 
         <div style={fieldGroupStyle}>
           <label htmlFor="fullName" style={labelStyle}>
-            Full Name
+            Full name
           </label>
           <input
             id="fullName"
@@ -71,7 +72,7 @@ export const SignUpPage: React.FC = () => {
 
         <div style={fieldGroupStyle}>
           <label htmlFor="email" style={labelStyle}>
-            Email Address
+            Email address
           </label>
           <input
             id="email"
@@ -103,7 +104,7 @@ export const SignUpPage: React.FC = () => {
         {invitationToken && (
           <div style={fieldGroupStyle}>
             <label htmlFor="invitationToken" style={labelStyle}>
-              Invitation Code
+              Invitation code
             </label>
             <input
               id="invitationToken"
@@ -116,13 +117,13 @@ export const SignUpPage: React.FC = () => {
         )}
 
         <button type="submit" disabled={isLoading} style={submitButtonStyle}>
-          {isLoading ? 'Creating Account...' : 'Create Account'}
+          {isLoading ? 'Creating account...' : 'Create account'}
         </button>
 
         <div style={footerLinkContainerStyle}>
           <span style={footerTextStyle}>Already have an account? </span>
           <a href="/sign-in" style={signInLinkStyle}>
-            Sign in
+            Sign in &rarr;
           </a>
         </div>
       </form>
@@ -134,39 +135,44 @@ const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '1.25rem',
+  textAlign: 'left',
 };
 
 const errorBannerStyle: React.CSSProperties = {
   backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  border: '1px solid var(--danger-text)',
   color: 'var(--danger-text)',
-  padding: '0.75rem',
-  borderRadius: '6px',
-  fontSize: '0.875rem',
+  padding: '0.75rem 1rem',
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  textAlign: 'left',
 };
 
 const fieldGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.35rem',
+  gap: '0.4rem',
+  textAlign: 'left',
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
+  fontSize: '0.8125rem',
   fontWeight: 500,
-  color: 'var(--text)',
+  color: 'var(--muted-text)',
+  textAlign: 'left',
+  display: 'block',
 };
 
 const inputStyle: React.CSSProperties = {
   backgroundColor: 'var(--inset-surface)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-subtle)',
   color: 'var(--text)',
-  padding: '0.75rem',
+  padding: '0.85rem 1rem',
   borderRadius: '8px',
   fontSize: '0.875rem',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
+  textAlign: 'left',
 };
 
 const submitButtonStyle: React.CSSProperties = {
@@ -174,16 +180,18 @@ const submitButtonStyle: React.CSSProperties = {
   color: '#FFFFFF',
   border: 'none',
   borderRadius: '8px',
-  padding: '0.85rem',
+  padding: '0.875rem',
   fontWeight: 600,
-  fontSize: '0.875rem',
+  fontSize: '0.9375rem',
   cursor: 'pointer',
+  width: '100%',
   marginTop: '0.5rem',
+  transition: 'background-color 0.15s ease',
 };
 
 const footerLinkContainerStyle: React.CSSProperties = {
   textAlign: 'center',
-  marginTop: '0.5rem',
+  marginTop: '0.75rem',
 };
 
 const footerTextStyle: React.CSSProperties = {
@@ -193,6 +201,6 @@ const footerTextStyle: React.CSSProperties = {
 
 const signInLinkStyle: React.CSSProperties = {
   fontSize: '0.8125rem',
-  fontWeight: 600,
+  fontWeight: 500,
   color: 'var(--primary-link)',
 };

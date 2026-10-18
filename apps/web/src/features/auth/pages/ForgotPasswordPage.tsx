@@ -30,48 +30,25 @@ export const ForgotPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Reset Your Password"
+      tag="ACCOUNT RECOVERY"
+      title="Forgot password"
       subtitle="Enter your verified account email to receive secure recovery instructions."
     >
       {isSubmitted ? (
-        <div style={successContainerStyle}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }} role="img" aria-label="Mail">
-            ✉️
-          </div>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)', fontSize: '1.1rem' }}>
-            Check Your Email
+        <div style={submittedContainerStyle}>
+          <h3 style={submittedTitleStyle}>
+            Check your email
           </h3>
-          <p style={{ color: 'var(--muted-text)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+          <p style={submittedBodyStyle}>
             If an account exists for <strong style={{ color: 'var(--text)' }}>{email}</strong>, a password reset link
             has been sent. Please check your inbox and spam folder.
           </p>
-          <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <a
-              href="/reset-password"
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'var(--primary)',
-                color: '#FFFFFF',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                textAlign: 'center',
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-              }}
-            >
-              Enter Reset Code
+          <div style={submittedActionStyle}>
+            <a href="/reset-password" style={actionButtonStyle}>
+              Enter reset code
             </a>
-            <a
-              href="/sign-in"
-              style={{
-                display: 'inline-block',
-                color: 'var(--muted-text)',
-                textAlign: 'center',
-                fontSize: '0.8125rem',
-              }}
-            >
-              Back to Sign In
+            <a href="/sign-in" style={returnLinkStyle}>
+              Return to sign in &rarr;
             </a>
           </div>
         </div>
@@ -81,7 +58,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
           <div style={fieldGroupStyle}>
             <label htmlFor="email" style={labelStyle}>
-              Email Address
+              Email address
             </label>
             <input
               id="email"
@@ -95,12 +72,12 @@ export const ForgotPasswordPage: React.FC = () => {
           </div>
 
           <button type="submit" disabled={isLoading} style={submitButtonStyle}>
-            {isLoading ? 'Sending...' : 'Send Recovery Instructions'}
+            {isLoading ? 'Sending instructions...' : 'Send reset instructions'}
           </button>
 
           <div style={footerLinkContainerStyle}>
-            <a href="/sign-in" style={backLinkStyle}>
-              ← Back to Sign In
+            <a href="/sign-in" style={returnLinkStyle}>
+              Return to sign in &rarr;
             </a>
           </div>
         </form>
@@ -113,44 +90,44 @@ const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '1.25rem',
-};
-
-const successContainerStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: '1rem 0',
+  textAlign: 'left',
 };
 
 const errorBannerStyle: React.CSSProperties = {
   backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  border: '1px solid var(--danger-text)',
   color: 'var(--danger-text)',
-  padding: '0.75rem',
-  borderRadius: '6px',
-  fontSize: '0.875rem',
+  padding: '0.75rem 1rem',
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  textAlign: 'left',
 };
 
 const fieldGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.35rem',
+  gap: '0.4rem',
+  textAlign: 'left',
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
+  fontSize: '0.8125rem',
   fontWeight: 500,
-  color: 'var(--text)',
+  color: 'var(--muted-text)',
+  textAlign: 'left',
+  display: 'block',
 };
 
 const inputStyle: React.CSSProperties = {
   backgroundColor: 'var(--inset-surface)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-subtle)',
   color: 'var(--text)',
-  padding: '0.75rem',
+  padding: '0.85rem 1rem',
   borderRadius: '8px',
   fontSize: '0.875rem',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
+  textAlign: 'left',
 };
 
 const submitButtonStyle: React.CSSProperties = {
@@ -158,20 +135,59 @@ const submitButtonStyle: React.CSSProperties = {
   color: '#FFFFFF',
   border: 'none',
   borderRadius: '8px',
-  padding: '0.85rem',
+  padding: '0.875rem',
   fontWeight: 600,
-  fontSize: '0.875rem',
+  fontSize: '0.9375rem',
   cursor: 'pointer',
+  width: '100%',
   marginTop: '0.5rem',
+  transition: 'background-color 0.15s ease',
 };
 
 const footerLinkContainerStyle: React.CSSProperties = {
   textAlign: 'center',
-  marginTop: '0.5rem',
+  marginTop: '0.75rem',
 };
 
-const backLinkStyle: React.CSSProperties = {
+const returnLinkStyle: React.CSSProperties = {
   fontSize: '0.8125rem',
+  fontWeight: 500,
+  color: 'var(--primary-link)',
+};
+
+const submittedContainerStyle: React.CSSProperties = {
+  textAlign: 'left',
+};
+
+const submittedTitleStyle: React.CSSProperties = {
+  margin: '0 0 0.75rem 0',
+  color: 'var(--text)',
+  fontSize: '1.125rem',
+  fontWeight: 600,
+};
+
+const submittedBodyStyle: React.CSSProperties = {
   color: 'var(--muted-text)',
+  fontSize: '0.875rem',
+  lineHeight: 1.6,
+  margin: '0 0 1.5rem 0',
+};
+
+const submittedActionStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1rem',
+  alignItems: 'stretch',
+};
+
+const actionButtonStyle: React.CSSProperties = {
+  display: 'inline-block',
+  backgroundColor: 'var(--primary)',
+  color: '#FFFFFF',
+  padding: '0.875rem',
+  borderRadius: '8px',
+  fontWeight: 600,
+  textAlign: 'center',
   textDecoration: 'none',
+  fontSize: '0.9375rem',
 };

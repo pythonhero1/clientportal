@@ -1,36 +1,46 @@
 :root {
-  /* Semantic Tokens - Dark Theme (Figma visual authority) */
-  --canvas: #070B12;
-  --surface: #0B1320;
-  --surface-raised: #0B1423;
-  --inset-surface: #07101D;
-  --border: #24334B;
-  --text: #F5F7FB;
-  --muted-text: #919DB0;
-  --primary: #2F6DF6;
-  --primary-hover: #1d5ce5;
-  --primary-link: #4C91FF;
-  --success-text: #24D7A1;
-  --warning-text: #FFBD44;
+  /* Semantic Tokens - Dark Theme (Authority from Stephen's approved screen) */
+  --canvas: #06090E;
+  --surface: #0C1424;
+  --surface-raised: #111A2E;
+  --inset-surface: #080D18;
+  --border: transparent;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text: #F8FAFC;
+  --muted-text: #94A3B8;
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-link: #3B82F6;
+  --accent-cyan: #38BDF8;
+  --badge-border: rgba(16, 185, 129, 0.4);
+  --badge-text: #10B981;
+  --badge-bg: rgba(16, 185, 129, 0.06);
+  --success-text: #10B981;
+  --warning-text: #F59E0B;
   --danger-text: #EF4444;
 }
 
 [data-theme="light"],
 body.light-theme {
-  /* Semantic Tokens - Light Theme (Design extension) */
-  --canvas: #F7F9FC;
+  /* Semantic Tokens - Light Theme */
+  --canvas: #F8FAFC;
   --surface: #FFFFFF;
-  --surface-raised: #EEF2F7;
+  --surface-raised: #F1F5F9;
   --inset-surface: #F8FAFC;
-  --border: #CBD5E1;
-  --text: #111827;
-  --muted-text: #475569;
-  --primary: #1D4ED8;
-  --primary-hover: #1E40AF;
-  --primary-link: #1D4ED8;
-  --success-text: #047857;
-  --warning-text: #92400E;
-  --danger-text: #B91C1C;
+  --border: transparent;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --text: #0F172A;
+  --muted-text: #64748B;
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-link: #2563EB;
+  --accent-cyan: #0284C7;
+  --badge-border: rgba(5, 150, 105, 0.4);
+  --badge-text: #059669;
+  --badge-bg: rgba(5, 150, 105, 0.06);
+  --success-text: #059669;
+  --warning-text: #D97706;
+  --danger-text: #DC2626;
 }
 
 body {

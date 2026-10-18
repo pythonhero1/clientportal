@@ -31,7 +31,6 @@ export const ResetPasswordPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Simulate password reset confirmation
       setIsSuccess(true);
     } catch {
       setError('Invalid or expired reset code. Please request a new link.');
@@ -42,38 +41,21 @@ export const ResetPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Create New Password"
+      tag="ACCOUNT SECURITY"
+      title="Reset password"
       subtitle="Enter the code sent to your email along with your new password."
     >
       {isSuccess ? (
         <div style={successContainerStyle}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }} role="img" aria-label="Success">
-            ✅
-          </div>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)', fontSize: '1.1rem' }}>
-            Password Updated
+          <h3 style={successTitleStyle}>
+            Password updated successfully
           </h3>
-          <p style={{ color: 'var(--muted-text)', fontSize: '0.875rem', lineHeight: 1.5 }}>
-            Your password has been reset successfully. You can now sign in with your new credentials.
+          <p style={successBodyStyle}>
+            Your password has been changed. You can now use your new password to sign in to your client workspace.
           </p>
           <div style={{ marginTop: '1.5rem' }}>
-            <a
-              href="/sign-in"
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'var(--primary)',
-                color: '#FFFFFF',
-                padding: '0.75rem 1.25rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                textAlign: 'center',
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            >
-              Sign In Now
+            <a href="/sign-in" style={actionButtonStyle}>
+              Sign in to portal &rarr;
             </a>
           </div>
         </div>
@@ -83,7 +65,7 @@ export const ResetPasswordPage: React.FC = () => {
 
           <div style={fieldGroupStyle}>
             <label htmlFor="code" style={labelStyle}>
-              Reset Verification Code
+              Reset code
             </label>
             <input
               id="code"
@@ -98,7 +80,7 @@ export const ResetPasswordPage: React.FC = () => {
 
           <div style={fieldGroupStyle}>
             <label htmlFor="newPassword" style={labelStyle}>
-              New Password
+              New password
             </label>
             <input
               id="newPassword"
@@ -114,14 +96,14 @@ export const ResetPasswordPage: React.FC = () => {
 
           <div style={fieldGroupStyle}>
             <label htmlFor="confirmPassword" style={labelStyle}>
-              Confirm New Password
+              Confirm new password
             </label>
             <input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter password"
+              placeholder="Confirm new password"
               minLength={8}
               required
               style={inputStyle}
@@ -129,12 +111,12 @@ export const ResetPasswordPage: React.FC = () => {
           </div>
 
           <button type="submit" disabled={isLoading} style={submitButtonStyle}>
-            {isLoading ? 'Updating...' : 'Update Password'}
+            {isLoading ? 'Updating password...' : 'Update password'}
           </button>
 
           <div style={footerLinkContainerStyle}>
-            <a href="/sign-in" style={backLinkStyle}>
-              ← Return to Sign In
+            <a href="/sign-in" style={returnLinkStyle}>
+              Back to sign in &rarr;
             </a>
           </div>
         </form>
@@ -147,44 +129,44 @@ const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '1.25rem',
-};
-
-const successContainerStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: '1rem 0',
+  textAlign: 'left',
 };
 
 const errorBannerStyle: React.CSSProperties = {
   backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  border: '1px solid var(--danger-text)',
   color: 'var(--danger-text)',
-  padding: '0.75rem',
-  borderRadius: '6px',
-  fontSize: '0.875rem',
+  padding: '0.75rem 1rem',
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  textAlign: 'left',
 };
 
 const fieldGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.35rem',
+  gap: '0.4rem',
+  textAlign: 'left',
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
+  fontSize: '0.8125rem',
   fontWeight: 500,
-  color: 'var(--text)',
+  color: 'var(--muted-text)',
+  textAlign: 'left',
+  display: 'block',
 };
 
 const inputStyle: React.CSSProperties = {
   backgroundColor: 'var(--inset-surface)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-subtle)',
   color: 'var(--text)',
-  padding: '0.75rem',
+  padding: '0.85rem 1rem',
   borderRadius: '8px',
   fontSize: '0.875rem',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
+  textAlign: 'left',
 };
 
 const submitButtonStyle: React.CSSProperties = {
@@ -192,20 +174,54 @@ const submitButtonStyle: React.CSSProperties = {
   color: '#FFFFFF',
   border: 'none',
   borderRadius: '8px',
-  padding: '0.85rem',
+  padding: '0.875rem',
   fontWeight: 600,
-  fontSize: '0.875rem',
+  fontSize: '0.9375rem',
   cursor: 'pointer',
+  width: '100%',
   marginTop: '0.5rem',
+  transition: 'background-color 0.15s ease',
 };
 
 const footerLinkContainerStyle: React.CSSProperties = {
   textAlign: 'center',
-  marginTop: '0.5rem',
+  marginTop: '0.75rem',
 };
 
-const backLinkStyle: React.CSSProperties = {
+const returnLinkStyle: React.CSSProperties = {
   fontSize: '0.8125rem',
+  fontWeight: 500,
+  color: 'var(--primary-link)',
+};
+
+const successContainerStyle: React.CSSProperties = {
+  textAlign: 'left',
+};
+
+const successTitleStyle: React.CSSProperties = {
+  margin: '0 0 0.75rem 0',
+  color: 'var(--text)',
+  fontSize: '1.125rem',
+  fontWeight: 600,
+};
+
+const successBodyStyle: React.CSSProperties = {
   color: 'var(--muted-text)',
+  fontSize: '0.875rem',
+  lineHeight: 1.6,
+  margin: 0,
+};
+
+const actionButtonStyle: React.CSSProperties = {
+  display: 'inline-block',
+  backgroundColor: 'var(--primary)',
+  color: '#FFFFFF',
+  padding: '0.875rem',
+  borderRadius: '8px',
+  fontWeight: 600,
+  textAlign: 'center',
   textDecoration: 'none',
+  fontSize: '0.9375rem',
+  width: '100%',
+  boxSizing: 'border-box',
 };
