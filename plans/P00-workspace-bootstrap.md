@@ -1,0 +1,102 @@
+# Workspace bootstrap
+
+- Task: P00 establish a reproducible Windows development foundation
+- Status: APPROVED
+- Created: 2026-10-18
+- Updated: 2026-10-18
+- Workspace: one new portal repository
+
+## 1 Task
+
+Prepare the new React/TypeScript and NestJS/TypeScript workspaces, their checked scripts, local development connection and version control without provisioning external production services.
+
+## 2 Applicable memory
+
+Read the full decision family before implementation. In particular, the current role decision states: "The first release has Owner and Client only and includes all 18 client screens." The environment decision states: "Windows; Antigravity 2.24.0; no existing application code or repository; Stephen is the approver."
+
+The stack is already approved; supporting libraries are a proposal in BUILD-PLAN.md. Do not present the proposal as a historical approval.
+
+## 3 Affected files
+
+Existing planning files may be updated with actual evidence. Proposed new paths: root `package.json` and `package-lock.json`; `apps/web/` Vite/React TypeScript scaffold and proxy configuration; `apps/api/` NestJS TypeScript scaffold; root script wiring; exact version record; `.nvmrc`/runtime version declaration; health endpoint and focused integration check. Name the generated files after inspecting the current scaffold output, then update this section before implementation beyond that approved generator scope.
+
+No application paths above exist in this package yet. No external Git remote, paid service, production database or hosting change is included.
+
+## 4 Contract status
+
+- Core framework separation: confirmed by earlier approved architecture.
+- Supporting tools/module configuration and root script contract: proposed for Stephen's review.
+- Development API health/proxy interface: proposed; record the exact route/response before wiring the browser.
+- Database/provider, billing and messaging business interfaces: outside P00; open decisions do not block this foundation task.
+
+## 5 Scope and acceptance
+
+Stephen's setup answer: "Windows. Yes antigravity is already installed v2.24.0, we are starting from scratch no existing code or repository."
+
+Acceptance: tool versions recorded; one root workspace/lockfile; both production builds pass; strict type/lint/test scripts behave as documented; the API health check is reached through the browser development proxy; secrets and uploads are excluded from Git; no external service is purchased or deployed.
+
+## 6 Ordered steps
+
+1. Inspect the root, Git state and tool versions. Do not print secrets. Confirm there is no existing application to overwrite.
+2. Present the recommended supporting baseline and check the current CLI/module/SDK compatibility.
+3. After Stephen approves this scope, initialize the local Git repository with Stephen's identity where required.
+4. Run the reviewed scaffolding commands from SETUP-WINDOWS.md, recording exact versions and generated paths. Preserve one npm workspace lockfile.
+5. Configure strict types, quality/test/build scripts, development proxy, environment validation boundaries and a real API health request.
+6. Run a clean install, relevant checks and both builds. Start web/API locally and verify the real development request.
+7. Review the diff, check secret exclusion, update plan evidence/memory, run the memory checker and commit the reviewed result.
+
+Rollback: because this is an empty application baseline, revert the reviewed bootstrap commit or remove only its verified new application files after Stephen authorizes that cleanup. Never remove the supplied planning/history files or unrelated user files.
+
+## 7 Objections
+
+### O1 Scaffold versions may not match older examples serious
+
+Current Clerk, Prisma and NestJS documentation has changed SDK/module setup. Resolve compatible stable versions at the start, pin them and record the exact commands. Do not mix generations or promise a preselected patch without checking it.
+
+### O2 Hosting details remain unknown serious
+
+P00 does not configure a host or choose resource capacity. Verify locally and leave deployment blocked only in its own area. Do not infer that 7Gb is server memory or binary storage.
+
+### O3 The target date could encourage fixture only completion serious
+
+P00 proves a foundation only. Keep all 18 screens and integration work visible in the master plan. Do not call this task a finished portal.
+
+### O4 Generated file list is not yet observed minor
+
+Generator scope is listed, but its exact output is not asserted as existing. Inspect it and record the resulting manifest before additional edits. Do not fabricate code locators.
+
+## 8 Verdict
+
+APPROVED. The P00 bootstrap scope has been approved by Stephen. Execution is currently gated on installing the prerequisite development tools (Git, Node.js 24 LTS, Python 3) on the host Windows system before running the approved repository initialization and scaffolding steps.
+
+## 9 Approval
+
+APPROVED by Stephen on 2026-10-18 with instruction: "Approve". Scope covers P00 workspace bootstrap as defined in this plan: environment verification, local Git initialization, React/Vite + NestJS monorepo scaffolding, npm workspaces, strict lint/type/test scripts, and dev proxy health check.
+
+## 10 Execution log
+
+- Planning package: created and separately validated as documentation/workflow output. Aligned directly to root workspace.
+- Windows tool inspection & setup: COMPLETED on Stephen's computer (2026-10-18).
+  - Python 3.12.10 installed and verified (`python tools/check-memory.py` passed 7/7 checks).
+  - Node.js LTS v24.20.0 and npm v11.19.0 installed and verified.
+  - Git v2.56.0.2 installed and verified.
+  - Tool binaries registered in persistent user PATH.
+- Git repository: Initialized (`git init -b main`). Staging initial workflow files pending author configuration.
+- Application generation, installation, build and browser health test: NOT YET ATTEMPTED.
+- Service accounts/hosting: not configured by this task.
+
+## 11 Deviations
+
+None recorded for application implementation because it has not started. The planning kit uses project skills instead of legacy workflows because official guidance schedules their retirement on 19 October 2026.
+
+## 12 Memory changes
+
+Approved/delegated requirements have been seeded with sources. Future tool versions and discovered conventions should be added only after they are observed and reviewed as applicable.
+
+## 13 Stephen confirmation
+
+Confirm the chosen supporting baseline, local tool behavior, build commands, health request and absence of committed secrets. This confirms the foundation only, not business features or deployment.
+
+## 14 Integration and handoff
+
+No live external interface is integrated in P00. Produce exact local commands and a version manifest. Carry the existing hosting/payment/messaging questions into their affected plans without relitigating the approved core stack.

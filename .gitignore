@@ -1,0 +1,34 @@
+# Dependencies and generated application output
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+__pycache__/
+
+# Secrets and local state
+.env
+.env.*
+!.env.web.example
+!.env.api.example
+*.pem
+*.key
+*.p12
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.agents/state/
+.agents/cache/
+
+# Agent rules, skills, plans and memory must remain tracked
+!.agents/rules/
+!.agents/skills/
+
+# No client uploads or database exports in Git
+local-uploads/
+backups/
+*.dump
+history/*.bundle
