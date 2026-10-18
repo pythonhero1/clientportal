@@ -1,46 +1,80 @@
 :root {
-  /* Semantic Tokens - Dark Theme (Authority from Stephen's approved screen) */
-  --canvas: #06090E;
-  --surface: #0C1424;
-  --surface-raised: #111A2E;
-  --inset-surface: #080D18;
-  --border: transparent;
+  /* Semantic Tokens - Dark Theme (Authority from inspected screens in docs/DESIGN-SYSTEM.md) */
+  --canvas: #070B12;
+  --surface: #0B1320;
+  --surface-raised: #0B1423;
+  --inset-surface: #07101D;
+  --border: #24334B;
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --text: #F8FAFC;
-  --muted-text: #94A3B8;
-  --primary: #2563EB;
+  --text: #F5F7FB;
+  --muted-text: #919DB0;
+  --primary: #2F6DF6;
   --primary-hover: #1D4ED8;
-  --primary-link: #3B82F6;
+  --primary-link: #4C91FF;
   --accent-cyan: #38BDF8;
-  --badge-border: rgba(16, 185, 129, 0.4);
-  --badge-text: #10B981;
-  --badge-bg: rgba(16, 185, 129, 0.06);
-  --success-text: #10B981;
-  --warning-text: #F59E0B;
+  --focus-ring: #2F6DF6;
+
+  /* Status Tokens */
+  --success-text: #24D7A1;
+  --success-bg: rgba(36, 215, 161, 0.1);
+  --success-border: rgba(36, 215, 161, 0.3);
+
+  --warning-text: #FFBD44;
+  --warning-bg: rgba(255, 189, 68, 0.1);
+  --warning-border: rgba(255, 189, 68, 0.3);
+
   --danger-text: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-border: rgba(239, 68, 68, 0.3);
+
+  --badge-border: rgba(36, 215, 161, 0.4);
+  --badge-text: #24D7A1;
+  --badge-bg: rgba(36, 215, 161, 0.06);
+
+  /* Fixture Preview Badge */
+  --fixture-bg: #854D0E;
+  --fixture-text: #FEF08A;
+  --fixture-border: #EAB308;
 }
 
 [data-theme="light"],
 body.light-theme {
-  /* Semantic Tokens - Light Theme */
-  --canvas: #F8FAFC;
+  /* Semantic Tokens - Light Theme (docs/DESIGN-SYSTEM.md extension) */
+  --canvas: #F7F9FC;
   --surface: #FFFFFF;
-  --surface-raised: #F1F5F9;
+  --surface-raised: #EEF2F7;
   --inset-surface: #F8FAFC;
-  --border: transparent;
+  --border: #CBD5E1;
   --border-subtle: rgba(0, 0, 0, 0.08);
-  --text: #0F172A;
-  --muted-text: #64748B;
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-link: #2563EB;
+  --text: #111827;
+  --muted-text: #475569;
+  --primary: #1D4ED8;
+  --primary-hover: #1E40AF;
+  --primary-link: #1D4ED8;
   --accent-cyan: #0284C7;
-  --badge-border: rgba(5, 150, 105, 0.4);
-  --badge-text: #059669;
-  --badge-bg: rgba(5, 150, 105, 0.06);
-  --success-text: #059669;
-  --warning-text: #D97706;
-  --danger-text: #DC2626;
+  --focus-ring: #1D4ED8;
+
+  /* Status Tokens */
+  --success-text: #047857;
+  --success-bg: rgba(4, 120, 87, 0.1);
+  --success-border: rgba(4, 120, 87, 0.3);
+
+  --warning-text: #92400E;
+  --warning-bg: rgba(146, 64, 14, 0.1);
+  --warning-border: rgba(146, 64, 14, 0.3);
+
+  --danger-text: #B91C1C;
+  --danger-bg: rgba(185, 28, 28, 0.1);
+  --danger-border: rgba(185, 28, 28, 0.3);
+
+  --badge-border: rgba(4, 120, 87, 0.4);
+  --badge-text: #047857;
+  --badge-bg: rgba(4, 120, 87, 0.06);
+
+  /* Fixture Preview Badge */
+  --fixture-bg: #FEF9C3;
+  --fixture-text: #854D0E;
+  --fixture-border: #FACC15;
 }
 
 body {
@@ -64,4 +98,10 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Accessible visible focus indicator */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }

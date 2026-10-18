@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useTheme } from '../hooks/useTheme';
 import '../styles/tokens.css';
 
 interface AuthLayoutProps {
@@ -14,18 +15,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   title,
   subtitle,
 }) => {
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   return (
     <div style={containerStyle}>
@@ -49,9 +39,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <button
             onClick={toggleTheme}
             style={themeToggleStyle}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
           >
-            {theme === 'dark' ? 'LIGHT' : 'DARK'}
+            {resolvedTheme === 'dark' ? 'LIGHT' : 'DARK'}
           </button>
         </div>
       </header>

@@ -18,6 +18,70 @@ enum AccountStatus {
   REJECTED
 }
 
+enum ProjectStatus {
+  ONBOARDING
+  ACTIVE
+  IN_REVIEW
+  COMPLETED
+  ARCHIVED
+}
+
+enum WebsiteEnvironment {
+  STAGING
+  PRODUCTION
+}
+
+enum WebsiteStatus {
+  DRAFT
+  LIVE
+  MAINTENANCE
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  AWAITING_REVIEW
+  APPROVED
+}
+
+enum DriveDocumentCategory {
+  BRIEF
+  SPECIFICATION
+  BRAND_GUIDELINES
+  CONTRACT
+  OTHER
+}
+
+enum OnboardingStepKey {
+  CONTACT_DETAILS
+  QUESTIONNAIRE
+  BRAND_ASSETS
+  CONTENT_UPLOAD
+  ACCESS_CREDENTIALS
+  KICKOFF_APPROVAL
+}
+
+enum StepStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  AWAITING_REVIEW
+}
+
+enum CredentialShareMethod {
+  COLLABORATOR_INVITE
+  BITWARDEN_SEND
+  DIRECT_DELEGATION
+}
+
+enum CredentialShareStatus {
+  REQUESTED
+  INVITATION_SENT
+  SEND_LINK_PROVIDED
+  RECEIVED_AND_VERIFIED
+  REVOKED
+}
+
 model User {
   id           String              @id @default(cuid())
   clerkUserId  String              @unique
@@ -50,14 +114,114 @@ model Profile {
 }
 
 model Project {
-  id          String              @id @default(cuid())
+  id                 String                    @id @default(cuid())
+  name               String
+  description        String?
+  status             ProjectStatus             @default(ONBOARDING)
+  kickoffApprovedAt  DateTime?
+  kickoffApprovedById String?
+  kickoffNotes       String?
+  memberships        ProjectMembership[]
+  invitations        Invitation[]
+  websites           Website[]
+  milestones         Milestone[]
+  documents          DriveDocument[]
+  onboardingSteps    OnboardingStep[]
+  questionnaire      QuestionnaireResponse?
+  credentialRequests CredentialAccessRequest[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+}
+
+model Website {
+  id          String             @id @default(cuid())
+  projectId   String
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name        String
-  description String?
-  status      String              @default("ACTIVE")
-  memberships ProjectMembership[]
-  invitations Invitation[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  url         String
+  environment WebsiteEnvironment @default(STAGING)
+  status      WebsiteStatus      @default(DRAFT)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([projectId])
+}
+
+model Milestone {
+  id           String          @id @default(cuid())
+  projectId    String
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  orderIndex   Int             @default(0)
+  status       MilestoneStatus @default(PLANNED)
+  dueDate      DateTime?
+  approvedAt   DateTime?
+  approvedById String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([projectId])
+}
+
+model DriveDocument {
+  id               String                @id @default(cuid())
+  projectId        String
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title            String
+  driveUrl         String
+  category         DriveDocumentCategory @default(OTHER)
+  sharedStatusNote String?
+  createdById      String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([projectId])
+}
+
+model OnboardingStep {
+  id            String            @id @default(cuid())
+  projectId     String
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stepKey       OnboardingStepKey
+  status        StepStatus        @default(NOT_STARTED)
+  completedAt   DateTime?
+  completedById String?
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([projectId, stepKey])
+  @@index([projectId])
+}
+
+model QuestionnaireResponse {
+  id          String    @id @default(cuid())
+  projectId   String    @unique
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId    String?
+  data        Json      @default("{}")
+  isDraft     Boolean   @default(true)
+  submittedAt DateTime?
+  lastSavedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CredentialAccessRequest {
+  id            String                @id @default(cuid())
+  projectId     String
+  project       Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platformName  String
+  method        CredentialShareMethod @default(COLLABORATOR_INVITE)
+  status        CredentialShareStatus @default(REQUESTED)
+  instructions  String?
+  confirmedAt   DateTime?
+  confirmedById String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([projectId])
 }
 
 model ProjectMembership {

@@ -5,6 +5,18 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oderinde Stephen | Client Portal</title>
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('theme');
+          var resolved = stored;
+          if (!resolved || resolved === 'system') {
+            resolved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          }
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
