@@ -1,0 +1,24 @@
+{
+  "name": "client-portal",
+  "version": "1.0.0",
+  "description": "Oderinde Stephen Client Portal",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @os-portal/web",
+    "dev:api": "npm run start:dev --workspace @os-portal/api",
+    "typecheck": "npm run typecheck --workspace @os-portal/web && npm run typecheck --workspace @os-portal/api",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace @os-portal/api",
+    "build": "npm run build --workspaces",
+    "contracts:generate": "node -e \"console.log('contracts:generate not yet wired in P00')\"",
+    "db:generate": "node -e \"console.log('db:generate not yet wired in P00')\"",
+    "db:migrate:dev": "node -e \"console.log('db:migrate:dev not yet wired in P00')\"",
+    "db:migrate:deploy": "node -e \"console.log('db:migrate:deploy not yet wired in P00')\"",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
+  }
+}
