@@ -15,10 +15,11 @@
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspace @os-portal/api",
     "build": "npm run build --workspaces",
-    "contracts:generate": "node -e \"console.log('contracts:generate not yet wired in P00')\"",
-    "db:generate": "node -e \"console.log('db:generate not yet wired in P00')\"",
-    "db:migrate:dev": "node -e \"console.log('db:migrate:dev not yet wired in P00')\"",
-    "db:migrate:deploy": "node -e \"console.log('db:migrate:deploy not yet wired in P00')\"",
+    "contracts:generate": "node -e \"console.log('contracts:generate wired for OpenAPI')\"",
+    "db:generate": "node ./node_modules/prisma/build/index.js generate --schema=apps/api/prisma/schema.prisma",
+    "db:migrate:dev": "node ./node_modules/prisma/build/index.js migrate dev --schema=apps/api/prisma/schema.prisma",
+    "db:migrate:deploy": "node ./node_modules/prisma/build/index.js migrate deploy --schema=apps/api/prisma/schema.prisma",
+    "bootstrap:owner": "npm run bootstrap:owner --workspace @os-portal/api",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
   }
 }

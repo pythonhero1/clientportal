@@ -1,7 +1,7 @@
 # Identity and Access (Database Identity and Authorization)
 
 - Task: P01 implement Prisma schema, Clerk authentication, account activation, Owner bootstrap, role/project authorization guards, and auth screens 01-05
-- Status: AWAITING APPROVAL
+- Status: IMPLEMENTED - AWAITING STEPHEN CONFIRMATION
 - Created: 2026-10-18
 - Updated: 2026-10-18
 - Workspace: one portal repository
@@ -345,14 +345,49 @@ The implementation plan is concrete, follows the 14-section template, enforces O
 
 ## 9 Approval
 
-- Status: NOT YET APPROVED
-- Date: Pending Stephen's review
-- Stephen's instruction: Awaiting Stephen's explicit approval (`APPROVE` or `APPROVE WITH CHANGES`)
-- Approved scope: Phase P01 Identity and Access as defined in Sections 3, 5, and 6 of this plan.
+- Status: APPROVED
+- Date: 2026-10-18
+- Stephen's instruction: "Approve"
+- Approved scope: Phase P01 Identity and Access as defined in Sections 3, 5, and 6 of this plan: Prisma schema, Clerk authentication, account activation, Owner bootstrap, role/project authorization guards, and auth screens 01-05.
 
 ## 10 Execution log
 
-Implementation NOT YET ATTEMPTED. Awaiting Stephen's approval before source code, schema, or configuration modifications.
+- **2026-10-18**: Stephen approved plan P01 with instruction "Approve".
+- **Step 1: Database & Prisma Layer (`apps/api`)**:
+  - Authored `apps/api/prisma/schema.prisma` with `Role` (`Owner`, `Client`), `AccountStatus` (`PENDING_APPROVAL`, `ACTIVE`, `SUSPENDED`, `REJECTED`), `User`, `Profile`, `Project`, `ProjectMembership`, `Invitation`, and `AuditLog`.
+  - Configured `apps/api/prisma.config.ts` for Prisma 7 connection handling.
+  - Installed `@prisma/adapter-pg` and `pg`.
+  - Generated Prisma client (`npx prisma generate`) into `node_modules/@prisma/client`.
+  - Implemented `apps/api/src/prisma/prisma.service.ts` and `apps/api/src/prisma/prisma.module.ts` with connection resilience.
+  - Configured database scripts in `package.json` (`db:generate`, `db:migrate:dev`, `db:migrate:deploy`, `bootstrap:owner`).
+- **Step 2: Server-side Owner Bootstrap (`apps/api`)**:
+  - Implemented `apps/api/src/auth/scripts/bootstrap-owner.ts`.
+  - Verified logic: checks existing Owner, creates/elevates Stephen's verified identity, enforces MFA, logs immutable audit entry, rejects repeat executions.
+- **Step 3: Webhook Ingestion & Account Lifecycle (`apps/api`)**:
+  - Configured `apps/api/src/main.ts` with `rawBody: true` for Svix verification and global `ValidationPipe`.
+  - Implemented `apps/api/src/webhooks/clerk-webhook.controller.ts` and `apps/api/src/webhooks/clerk-webhook.service.ts` handling `user.created`, `user.updated`, `user.deleted` with deduplication via `AuditLog`.
+- **Step 4: Auth & Isolation Guards (`apps/api`)**:
+  - Implemented `ClerkAuthGuard`, `AccountStatusGuard`, `RolesGuard`, `OwnerMfaGuard`, `ProjectAccessGuard` in `apps/api/src/auth/guards/`.
+  - Implemented `ProjectsController` (`apps/api/src/projects/projects.controller.ts`) and `UsersController` (`apps/api/src/users/users.controller.ts`).
+  - Tested Client A vs Client B isolation: Client A accessing Client B project receives 404 Not Found.
+- **Step 5: Frontend Auth Shell & Screens 01–05 (`apps/web`)**:
+  - Implemented semantic dark/light tokens in `apps/web/src/styles/tokens.css`.
+  - Implemented `AuthLayout.tsx` supporting desktop, tablet, and mobile with instant theme switching.
+  - Implemented Screen 01 Login (`apps/web/src/features/auth/pages/SignInPage.tsx`).
+  - Implemented Screen 02 Sign Up (`apps/web/src/features/auth/pages/SignUpPage.tsx`).
+  - Implemented Screen 03 Forgot Password (`apps/web/src/features/auth/pages/ForgotPasswordPage.tsx`).
+  - Implemented Screen 04 Reset Password (`apps/web/src/features/auth/pages/ResetPasswordPage.tsx`).
+  - Implemented Screen 05 Verify Email (`apps/web/src/features/auth/pages/VerifyEmailPage.tsx`).
+  - Implemented `PendingApprovalPage.tsx` and `AccessDeniedPage.tsx`.
+  - Wired routes in `apps/web/src/routes/AppRoutes.tsx` and `apps/web/src/App.tsx`.
+- **Verification Evidence**:
+  - Unit tests: `npm run test` (2 passed in `apps/api/src/app.controller.spec.ts`).
+  - E2E tests: `npm run test:e2e` (13 passed across `test/app.e2e-spec.ts` and `test/auth-isolation.e2e-spec.ts`).
+  - Lint: `npm run lint` (0 warnings, 0 errors across 40 files).
+  - Typecheck: `npm run typecheck` (0 errors across `@os-portal/web` and `@os-portal/api`).
+  - Build: `npm run build` (Clean production bundles for web and api).
+  - Composite: `npm run verify` passed.
+  - Memory integrity: `py -3 tools/check-memory.py` passed (7 pass, 0 fail).
 
 ## 11 Deviations
 

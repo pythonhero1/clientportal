@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  Owner
+  Client
+}
+
+enum AccountStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+model User {
+  id           String              @id @default(cuid())
+  clerkUserId  String              @unique
+  email        String              @unique
+  name         String?
+  role         Role                @default(Client)
+  status       AccountStatus       @default(PENDING_APPROVAL)
+  mfaEnforced  Boolean             @default(false)
+  profile      Profile?
+  memberships  ProjectMembership[]
+  sentInvites  Invitation[]        @relation("InvitedBy")
+  auditActions AuditLog[]          @relation("ActorUser")
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([clerkUserId])
+  @@index([email])
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String?
+  companyName String?
+  avatarUrl   String?
+  timezone    String   @default("Africa/Lagos")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  status      String              @default("ACTIVE")
+  memberships ProjectMembership[]
+  invitations Invitation[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model ProjectMembership {
+  id                         String   @id @default(cuid())
+  projectId                  String
+  project                    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId                     String
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isDesignatedBillingContact Boolean  @default(false)
+  isDesignatedApprover       Boolean  @default(false)
+  joinedAt                   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Invitation {
+  id                         String    @id @default(cuid())
+  token                      String    @unique
+  email                      String
+  role                       Role      @default(Client)
+  projectId                  String?
+  project                    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  isDesignatedBillingContact Boolean   @default(false)
+  isDesignatedApprover       Boolean   @default(false)
+  status                     String    @default("PENDING")
+  invitedById                String
+  invitedBy                  User      @relation("InvitedBy", fields: [invitedById], references: [id])
+  expiresAt                  DateTime
+  acceptedAt                 DateTime?
+  createdAt                  DateTime  @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("ActorUser", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+}
