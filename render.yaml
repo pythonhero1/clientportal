@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     region: frankfurt
-    buildCommand: npm install --include=dev && npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build --workspace=@os-portal/api
+    buildCommand: npm install --include=dev && npx prisma generate --schema=apps/api/prisma/schema.prisma && npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma && npm run bootstrap:owner --workspace=@os-portal/api && npm run build --workspace=@os-portal/api
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /api
     autoDeploy: true
