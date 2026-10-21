@@ -6,7 +6,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
     const connectionString = process.env.DATABASE_URL || 'postgresql://localhost:5432/portal_dev';
-    const adapter = new PrismaPg({ connectionString });
+    const isRemote = Boolean(process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost'));
+    const adapter = new PrismaPg({
+      connectionString,
+      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+    });
     super({ adapter });
   }
 

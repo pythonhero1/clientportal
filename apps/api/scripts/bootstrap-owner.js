@@ -41,7 +41,11 @@ async function bootstrap() {
   }
 
   const connectionString = process.env.DATABASE_URL;
-  const adapter = new PrismaPg({ connectionString });
+  const isRemote = Boolean(connectionString && !connectionString.includes('localhost'));
+  const adapter = new PrismaPg({
+    connectionString,
+    ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+  });
   const prisma = new PrismaClient({ adapter });
 
   try {

@@ -19,6 +19,7 @@
     "db:generate": "node ./node_modules/prisma/build/index.js generate --schema=apps/api/prisma/schema.prisma",
     "db:migrate:dev": "node ./node_modules/prisma/build/index.js migrate dev --schema=apps/api/prisma/schema.prisma",
     "db:migrate:deploy": "node ./node_modules/prisma/build/index.js migrate deploy --schema=apps/api/prisma/schema.prisma",
+    "db:push": "npx prisma db push --schema=apps/api/prisma/schema.prisma",
     "bootstrap:owner": "npm run bootstrap:owner --workspace @os-portal/api",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
