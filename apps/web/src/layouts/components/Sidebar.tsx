@@ -21,6 +21,7 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useNotifications } from '../../features/notifications/hooks/useNotifications';
 
 export interface SidebarProps {
   role?: 'Owner' | 'Client';
@@ -35,6 +36,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onItemClick,
   className,
 }) => {
+  const { unreadCount } = useNotifications();
+
   const clientNav = [
     { to: '/overview', label: 'Dashboard Overview', icon: LayoutDashboard },
     { to: '/onboarding', label: 'Client Onboarding', icon: Sparkles, badge: '6 Steps' },
@@ -43,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/invoices', label: 'Invoices & Billing', icon: Receipt },
     { to: '/messages', label: 'Messages & Support', icon: MessageSquare },
     { to: '/meetings', label: 'Meetings & Calendar', icon: Calendar },
-    { to: '/notifications', label: 'Notifications', icon: Bell, badge: 3 },
+    { to: '/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
     { to: '/settings', label: 'Profile & Security', icon: Settings },
     { to: '/support', label: 'Help & Tickets', icon: HelpCircle },
   ];
@@ -53,8 +56,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/owner/clients', label: 'Clients & Invitations', icon: Users, badge: 'Pending' },
     { to: '/owner/projects', label: 'Projects & Assignment', icon: FolderKanban },
     { to: '/owner/files', label: 'Deliverables & Lifecycle', icon: FileCheck2 },
+    { to: '/owner/messages', label: 'Messages & Channels', icon: MessageSquare },
     { to: '/owner/invoices', label: 'Billing & Invoices', icon: CreditCard },
     { to: '/owner/support', label: 'Support Queue', icon: LifeBuoy },
+    { to: '/owner/meetings', label: 'Meetings & Schedule', icon: Calendar },
+    { to: '/owner/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
     { to: '/overview', label: 'Switch to Client View', icon: ArrowLeftRight },
   ];
 

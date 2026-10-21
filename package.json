@@ -21,5 +21,8 @@
     "db:migrate:deploy": "node ./node_modules/prisma/build/index.js migrate deploy --schema=apps/api/prisma/schema.prisma",
     "bootstrap:owner": "npm run bootstrap:owner --workspace @os-portal/api",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

@@ -30,9 +30,12 @@ import { NoActiveProjectPage } from '../features/dashboard/pages/NoActiveProject
 import { OwnerDashboardPage } from '../features/owner/pages/OwnerDashboardPage';
 import { OwnerClientsPage } from '../features/owner/pages/OwnerClientsPage';
 import { OwnerProjectsPage } from '../features/owner/pages/OwnerProjectsPage';
+import { OwnerProjectDetailPage } from '../features/owner/pages/OwnerProjectDetailPage';
 import { OwnerFilesPage } from '../features/owner/pages/OwnerFilesPage';
 import { OwnerInvoicesPage } from '../features/owner/pages/OwnerInvoicesPage';
 import { OwnerSupportPage } from '../features/owner/pages/OwnerSupportPage';
+import { OwnerMessagesPage } from '../features/owner/pages/OwnerMessagesPage';
+import { OwnerMeetingsPage } from '../features/owner/pages/OwnerMeetingsPage';
 
 // Feedback & Boundary Pages
 import { NotFoundPage } from '../components/feedback/NotFoundPage';
@@ -74,9 +77,13 @@ export const AppRoutes: React.FC = () => {
         <Route path="/owner" element={<OwnerDashboardPage />} />
         <Route path="/owner/clients" element={<OwnerClientsPage />} />
         <Route path="/owner/projects" element={<OwnerProjectsPage />} />
+        <Route path="/owner/projects/:projectId" element={<OwnerProjectDetailPage />} />
         <Route path="/owner/files" element={<OwnerFilesPage />} />
+        <Route path="/owner/messages" element={<OwnerMessagesPage />} />
         <Route path="/owner/invoices" element={<OwnerInvoicesPage />} />
         <Route path="/owner/support" element={<OwnerSupportPage />} />
+        <Route path="/owner/meetings" element={<OwnerMeetingsPage />} />
+        <Route path="/owner/notifications" element={<NotificationsPage />} />
       </Route>
 
       {/* 404 Catch-All in Shell */}

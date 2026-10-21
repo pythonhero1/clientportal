@@ -29,6 +29,7 @@ Updated 18 October 2026. Current explicit answers override earlier scope. An app
 | Notifications | Browser push is selected; in-app history remains one of the 18 screens | Current answer 10 and release scope |
 | Planning identity | Stephen is the approver | Current answer 13 |
 | Launch date | Target 21 October 2026, Africa/Lagos | Current answer 2; no time specified |
+| Hosting providers | Cloudflare Pages (Frontend), Render (API & WebSockets), Supabase (PostgreSQL) | Stephen selection 2026-10-21 (D-16) |
 
 ## Superseded scope
 

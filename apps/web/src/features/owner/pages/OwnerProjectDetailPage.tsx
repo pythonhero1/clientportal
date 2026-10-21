@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PortalHeader } from '../../../components/PortalHeader';
-import { DevPersonaSwitcher } from '../../../components/DevPersonaSwitcher';
 import {
   fetchProjectWorkspace,
   addOwnerWebsite,
@@ -120,8 +118,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
   if (loading || !data) {
     return (
       <div style={pageContainerStyle}>
-        <DevPersonaSwitcher />
-        <PortalHeader activeTab="owner" />
         <div style={{ padding: '6rem 1rem', textAlign: 'center', color: 'var(--muted-text)' }}>
           Loading owner workspace detail...
         </div>
@@ -134,9 +130,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
 
   return (
     <div style={pageContainerStyle}>
-      <DevPersonaSwitcher />
-      <PortalHeader activeTab="owner" />
-
       <main style={mainContentStyle}>
         <div style={contentInnerStyle}>
           {/* Breadcrumb */}

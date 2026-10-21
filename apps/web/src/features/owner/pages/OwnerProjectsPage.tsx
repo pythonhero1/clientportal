@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PortalHeader } from '../../../components/PortalHeader';
-import { DevPersonaSwitcher } from '../../../components/DevPersonaSwitcher';
 import { fetchOwnerProjects, createOwnerProject } from '../../../services/projects-api';
 import {
   FolderGit2,
@@ -62,9 +60,6 @@ export const OwnerProjectsPage: React.FC = () => {
 
   return (
     <div style={pageContainerStyle}>
-      <DevPersonaSwitcher />
-      <PortalHeader activeTab="owner" />
-
       <main style={mainContentStyle}>
         <div style={contentInnerStyle}>
           {/* Header & Create Action */}

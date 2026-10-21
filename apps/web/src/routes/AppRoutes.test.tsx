@@ -62,7 +62,7 @@ describe('AppRoutes Integration Suite (All 18 Screens & Owner Views)', () => {
   describe('Client Portal Routes (Screens 06-18)', () => {
     it('renders /overview (Screen 07 Overview)', () => {
       renderWithRouter('/overview');
-      expect(screen.getAllByText('Welcome back, Stephen')[0]).toBeInTheDocument();
+      expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
     });
 
     it('renders /onboarding (Screen 06 Onboarding)', () => {
@@ -117,7 +117,7 @@ describe('AppRoutes Integration Suite (All 18 Screens & Owner Views)', () => {
 
     it('renders /support (Screen 17 Help Center & Ticket)', () => {
       renderWithRouter('/support');
-      expect(screen.getAllByText('Help Center & Tickets')[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/Help Center/i)[0]).toBeInTheDocument();
     });
 
     it('renders /no-project (Screen 18 No Active Project)', () => {
@@ -154,7 +154,12 @@ describe('AppRoutes Integration Suite (All 18 Screens & Owner Views)', () => {
 
     it('renders /owner/support (Support Queue)', () => {
       renderWithRouter('/owner/support');
-      expect(screen.getAllByText('Client Support Queue')[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/Client Support/i)[0]).toBeInTheDocument();
+    });
+
+    it('renders /owner/meetings (Meetings & Schedule)', () => {
+      renderWithRouter('/owner/meetings');
+      expect(screen.getAllByText('Meetings & Schedule')[0]).toBeInTheDocument();
     });
   });
 

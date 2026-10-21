@@ -92,11 +92,16 @@ body {
 }
 
 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:not([class]) {
   color: var(--primary-link);
   text-decoration: none;
 }
 
-a:hover {
+a:not([class]):hover {
   text-decoration: underline;
 }
 

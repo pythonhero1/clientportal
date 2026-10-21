@@ -67,6 +67,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // storage unavailable
     }
+    // Asynchronously synchronize with user profile if authenticated
+    if (typeof window !== 'undefined') {
+      import('../services/settings-api')
+        .then(({ updateUserProfile }) => updateUserProfile({ themePreference: mode }))
+        .catch(() => {});
+    }
   };
 
   const toggleTheme = () => {

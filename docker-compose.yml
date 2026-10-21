@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database (Optional local service if not using external managed DB like Neon/Supabase)
+  postgres:
+    image: postgres:16-alpine
+    container_name: os-portal-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: portal_admin
+      POSTGRES_PASSWORD: portal_secure_password
+      POSTGRES_DB: os_portal
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal_admin -d os_portal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. NestJS Backend API & Realtime WebSockets
+  portal-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: os-portal-api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://portal_admin:portal_secure_password@postgres:5432/os_portal?sslmode=disable
+      WEB_APP_URL: http://localhost:8080
+      CALCOM_DEFAULT_USERNAME: oderinde
+      CALCOM_DEFAULT_EVENT: free
+      CALCOM_DEFAULT_TIMEZONE: Asia/Dubai
+    ports:
+      - "3000:3000"
+
+  # 3. Static Nginx Frontend SPA
+  portal-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: os-portal-web
+    restart: always
+    depends_on:
+      - portal-api
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:

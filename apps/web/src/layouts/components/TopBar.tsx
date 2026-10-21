@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, Bell, Sun, Moon } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 import { useTheme } from '../../hooks/useTheme';
+import { useNotifications } from '../../features/notifications/hooks/useNotifications';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
@@ -19,6 +20,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   userEmail = 'stephen@oderindestephen.com',
 }) => {
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
 
   const getPageTitle = (pathname: string): string => {
@@ -112,7 +114,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           aria-label="View notifications"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--primary)]" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--primary)]" />
+          )}
         </Link>
 
         {/* User Menu */}

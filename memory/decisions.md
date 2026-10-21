@@ -122,4 +122,13 @@ Only actual approved decisions and explicitly delegated selections belong here. 
 - Status: active
 - Date: 2026-10-18
 
+### D-16 - Production hosting providers
+- Decision: Host frontend SPA on Cloudflare Pages, backend API and WebSockets on Render, and managed PostgreSQL on Supabase.
+- Source: Stephen instruction: "I will perfer option 2, Cloudflare page, render, supabase".
+- Rejected: Traditional self-managed Linux VPS, Vercel, Railway.
+- Applies to: Production hosting and deployment topology.
+- Status: active
+- Date: 2026-10-21
+
+
 

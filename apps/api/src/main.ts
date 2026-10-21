@@ -3,6 +3,12 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 
+// Safely serialize BigInt values to JSON (e.g. Prisma BigInt byteSize fields)
+(BigInt.prototype as any).toJSON = function () {
+  const int = Number.parseInt(this.toString(), 10);
+  return Number.isNaN(int) ? this.toString() : int;
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,

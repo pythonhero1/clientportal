@@ -1,14 +1,12 @@
 import React from 'react';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Button } from '../../../components/ui/Button';
-import { FixtureBadge } from '../../../components/ui/FixtureBadge';
 import { FolderPlus, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const NoActiveProjectPage: React.FC = () => {
   return (
     <div className="space-y-6 text-left max-w-2xl mx-auto">
-      <FixtureBadge phase="P03" />
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">

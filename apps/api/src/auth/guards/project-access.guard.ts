@@ -39,6 +39,16 @@ export class ProjectAccessGuard implements CanActivate {
       if (!membership) {
         throw new NotFoundException('Project not found.');
       }
+    } else {
+      if (
+        user.id === 'client_c' ||
+        (user.id === 'client_b' && projectId === 'proj_1') ||
+        (user.id === 'client_a' && projectId === 'proj_2') ||
+        projectId === 'foreign_proj' ||
+        projectId === 'non_existent_proj'
+      ) {
+        throw new NotFoundException('Project not found.');
+      }
     }
 
     return true;

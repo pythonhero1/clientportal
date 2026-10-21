@@ -49,7 +49,7 @@ export function setActivePersona(key: string) {
   }
 }
 
-function getAuthHeaders(): HeadersInit {
+export function getAuthHeaders(): HeadersInit {
   const persona = getActivePersona();
   return {
     'Content-Type': 'application/json',
@@ -57,6 +57,7 @@ function getAuthHeaders(): HeadersInit {
     'x-mock-role': persona.role,
     'x-mock-status': 'ACTIVE',
     'x-mock-mfa': persona.hasMfa ? 'true' : 'false',
+    'x-mock-billing-contact': persona.id === 'client_c' ? 'false' : 'true',
   };
 }
 

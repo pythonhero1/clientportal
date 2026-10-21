@@ -1,74 +1,143 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
-import { FixtureBadge } from '../../../components/ui/FixtureBadge';
-import { Send, Paperclip } from 'lucide-react';
+import { ConversationList } from '../components/ConversationList';
+import { MessageThread } from '../components/MessageThread';
+import { MessageComposer } from '../components/MessageComposer';
+import { useConversations } from '../hooks/useConversations';
+import { useMessages } from '../hooks/useMessages';
+import { ArrowLeft, MessageSquare, ShieldCheck } from 'lucide-react';
+import { cn } from '../../../utils/cn';
 
 export const MessagesPage: React.FC = () => {
-  return (
-    <div className="space-y-6 text-left max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col">
-      <FixtureBadge phase="P05" />
+  const {
+    conversations,
+    activeConversation,
+    activeConversationId,
+    setActiveConversationId,
+  } = useConversations();
 
+  const {
+    messages,
+    isLoading: isMessagesLoading,
+    isSending,
+    isConnected,
+    sendMessage,
+  } = useMessages(activeConversationId);
+
+  // Mobile navigation state
+  const [showMobileThread, setShowMobileThread] = useState(false);
+
+  const handleSelectConversation = (id: string) => {
+    setActiveConversationId(id);
+    setShowMobileThread(true);
+  };
+
+  return (
+    <div className="space-y-4 text-left max-w-6xl mx-auto h-[calc(100vh-10rem)] flex flex-col">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text)]">
             Messages & Communication
           </h1>
           <p className="text-xs text-[var(--muted-text)] mt-0.5">
-            Real-time persistent messaging with Stephen on project deliverables.
+            Real-time collaboration with Stephen on project deliverables and milestones.
           </p>
         </div>
-        <Badge variant="success" size="sm" dot>Connected</Badge>
+
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <Badge variant="success" size="sm" dot>Connected</Badge>
+          ) : (
+            <Badge variant="warning" size="sm" dot>Reconnecting...</Badge>
+          )}
+        </div>
       </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden p-0">
-        {/* Messages Header */}
-        <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-raised)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[var(--primary)] text-white font-semibold text-xs flex items-center justify-center">
-              SO
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[var(--text)]">Stephen Oderinde</p>
-              <p className="text-[0.6875rem] text-[var(--muted-text)]">Project Lead & Architect</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Message Stream */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
-          <div className="flex flex-col items-start max-w-md">
-            <div className="p-3 rounded-2xl rounded-tl-xs bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)]">
-              Welcome to the client portal! I have uploaded the updated v2.1 wireframes to the Files section for your review.
-            </div>
-            <span className="text-[0.625rem] text-[var(--muted-text)] mt-1 px-1">Oct 18, 2026, 2:15 PM</span>
-          </div>
-
-          <div className="flex flex-col items-end max-w-md ml-auto">
-            <div className="p-3 rounded-2xl rounded-tr-xs bg-[var(--primary)] text-white text-sm">
-              Thanks Stephen! Reviewing the desktop and tablet compositions now.
-            </div>
-            <span className="text-[0.625rem] text-[var(--muted-text)] mt-1 px-1">Oct 18, 2026, 2:30 PM</span>
-          </div>
-        </div>
-
-        {/* Compose Input Bar */}
-        <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)] flex items-center gap-2">
-          <button
-            className="p-2 text-[var(--muted-text)] hover:text-[var(--text)] rounded-lg focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
-            aria-label="Attach file"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
-          <input
-            type="text"
-            placeholder="Type a message to Stephen..."
-            className="flex-1 bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--text)] text-sm px-3.5 py-2 rounded-lg focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
+      {/* Main Container */}
+      <Card className="flex-1 flex overflow-hidden p-0 border border-[var(--border)] bg-[var(--surface)]">
+        {/* Left Column: Conversation List */}
+        <div
+          className={cn(
+            'w-full md:w-80 shrink-0 h-full flex flex-col',
+            showMobileThread ? 'hidden md:flex' : 'flex',
+          )}
+        >
+          <ConversationList
+            conversations={conversations}
+            activeId={activeConversationId}
+            onSelect={handleSelectConversation}
           />
-          <Button variant="primary" size="sm" rightIcon={<Send className="w-4 h-4" />}>
-            Send
-          </Button>
+        </div>
+
+        {/* Right Column: Active Thread + Composer */}
+        <div
+          className={cn(
+            'flex-1 flex-col h-full bg-[var(--canvas)]',
+            showMobileThread ? 'flex' : 'hidden md:flex',
+          )}
+        >
+          {activeConversation ? (
+            <>
+              {/* Header */}
+              <div className="p-3.5 border-b border-[var(--border)] bg-[var(--surface)] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowMobileThread(false)}
+                    className="md:hidden p-1.5 text-[var(--muted-text)] hover:text-[var(--text)] rounded-lg"
+                    aria-label="Back to conversations"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+
+                  <div className="w-8 h-8 rounded-full bg-[var(--primary)] text-white font-semibold text-xs flex items-center justify-center shrink-0">
+                    SO
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[var(--text)] truncate">
+                      {activeConversation.title ||
+                        activeConversation.project?.name ||
+                        'Stephen Oderinde'}
+                    </p>
+                    <div className="flex items-center gap-1 text-[0.625rem] text-[var(--muted-text)]">
+                      <ShieldCheck className="w-3 h-3 text-[var(--success-text)]" />
+                      <span>Encrypted • Authorized Channel</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Badge variant="neutral" size="sm">
+                  {activeConversation.type}
+                </Badge>
+              </div>
+
+              {/* Message Stream */}
+              <MessageThread
+                messages={messages}
+                isLoading={isMessagesLoading}
+              />
+
+              {/* Composer */}
+              <MessageComposer
+                onSend={sendMessage}
+                isSending={isSending}
+                isConnected={isConnected}
+                projectId={activeConversation.projectId}
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <MessageSquare className="w-8 h-8 text-[var(--muted-text)] mb-2" />
+              <p className="text-sm font-semibold text-[var(--text)]">
+                Select a channel
+              </p>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Choose a conversation from the left to start messaging.
+              </p>
+            </div>
+          )}
         </div>
       </Card>
     </div>

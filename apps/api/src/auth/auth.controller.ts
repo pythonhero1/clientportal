@@ -35,8 +35,10 @@ export class AuthController {
         mfaEnforced: user.mfaEnforced,
         profile: {
           companyName: null,
+          phone: null,
           timezone: 'Africa/Lagos',
           avatarUrl: null,
+          themePreference: 'system',
         },
       };
     }
@@ -51,8 +53,10 @@ export class AuthController {
         ...user,
         profile: {
           companyName: null,
+          phone: null,
           timezone: 'Africa/Lagos',
           avatarUrl: null,
+          themePreference: 'system',
         },
       };
     }
@@ -68,8 +72,10 @@ export class AuthController {
       profile: dbUser.profile
         ? {
             companyName: dbUser.profile.companyName,
+            phone: dbUser.profile.phone,
             timezone: dbUser.profile.timezone,
             avatarUrl: dbUser.profile.avatarUrl,
+            themePreference: dbUser.profile.themePreference,
           }
         : null,
     };
