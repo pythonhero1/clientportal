@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -42,10 +43,15 @@ async function bootstrap() {
 
   const connectionString = process.env.DATABASE_URL;
   const isRemote = Boolean(connectionString && !connectionString.includes('localhost'));
-  const adapter = new PrismaPg({
-    connectionString,
+  let sanitizedUrl = connectionString;
+  if (isRemote) {
+    sanitizedUrl = sanitizedUrl.replace(/([?&])sslmode=[^&]+(&|$)/, '$1').replace(/[?&]$/, '');
+  }
+  const pool = new pg.Pool({
+    connectionString: sanitizedUrl,
     ssl: isRemote ? { rejectUnauthorized: false } : undefined,
   });
+  const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
 
   try {
