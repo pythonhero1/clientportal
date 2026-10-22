@@ -64,8 +64,12 @@ export const AppShell: React.FC<AppShellProps> = ({
               return null;
             })
             .then((me) => {
-              if (me?.role) {
-                const isUserAdmin = me.role === 'Admin' || me.role === 'Owner';
+              if (me?.role || me?.email) {
+                const isUserAdmin =
+                  me.role === 'Admin' ||
+                  me.role === 'Owner' ||
+                  me.email?.toLowerCase() === 'stephenoderinde@gmail.com' ||
+                  currentUser.email.toLowerCase() === 'stephenoderinde@gmail.com';
                 const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
 
                 if (!isUserAdmin && isAdminRoute) {
@@ -89,9 +93,10 @@ export const AppShell: React.FC<AppShellProps> = ({
       });
   }, [location.pathname, navigate, userName, userEmail]);
 
-  // If path starts with /admin or /owner, force role="Admin"
+  // If user is Stephen or path starts with /admin, force role="Admin"
+  const isStephen = currentUser.email?.toLowerCase() === 'stephenoderinde@gmail.com';
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
-  const activeRole: 'Admin' | 'Client' = isAdminRoute || role === 'Admin' || role === 'Owner'
+  const activeRole: 'Admin' | 'Client' = isStephen || isAdminRoute || role === 'Admin' || role === 'Owner'
     ? 'Admin'
     : 'Client';
 

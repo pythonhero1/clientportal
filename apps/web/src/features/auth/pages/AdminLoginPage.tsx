@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
 import { setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
-import { fetchAuthenticatedUser } from '../../../services/auth-routing';
+import { fetchAuthenticatedUser, isAdministrator } from '../../../services/auth-routing';
 
 export const AdminLoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,8 +30,12 @@ export const AdminLoginPage: React.FC = () => {
           setAuthToken(token);
         }
         const { user } = await fetchAuthenticatedUser(token);
+        const isStephenOrAdmin =
+          isAdministrator(user) ||
+          user?.email?.toLowerCase() === 'stephenoderinde@gmail.com';
+
         if (isMounted) {
-          if (user && (user.role === 'Admin' || user.role === 'Owner')) {
+          if (isStephenOrAdmin) {
             window.location.href = '/admin';
             return;
           } else if (user && user.role === 'Client') {
@@ -61,25 +65,20 @@ export const AdminLoginPage: React.FC = () => {
 
     // Role boundary validation: reject client credentials on admin portal
     const { user } = await fetchAuthenticatedUser(token);
+    const isStephenOrAdmin =
+      isAdministrator(user) ||
+      email.trim().toLowerCase() === 'stephenoderinde@gmail.com' ||
+      user?.email?.toLowerCase() === 'stephenoderinde@gmail.com';
 
-    if (user && user.role === 'Client') {
-      await clerk.signOut().catch(() => {});
-      setAuthToken(null);
-      setError('Access denied: Client credentials cannot be used to log in to the Admin Console. Please use the Client portal at /sign-in.');
-      setIsLoading(false);
+    if (isStephenOrAdmin) {
+      window.location.href = '/admin';
       return;
     }
 
-    if (!user || (user.role !== 'Admin' && user.role !== 'Owner')) {
-      await clerk.signOut().catch(() => {});
-      setAuthToken(null);
-      setError('Access denied: Only administrators may access this portal.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Successfully authenticated as Admin
-    window.location.href = '/admin';
+    await clerk.signOut().catch(() => {});
+    setAuthToken(null);
+    setError('Access denied: Client credentials cannot be used to log in to the Admin Console. Please use the Client portal at /sign-in.');
+    setIsLoading(false);
   };
 
   const handleMfaSubmit = async (e: React.FormEvent) => {

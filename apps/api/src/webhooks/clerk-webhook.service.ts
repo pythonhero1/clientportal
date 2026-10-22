@@ -121,14 +121,24 @@ export class ClerkWebhookService {
             });
           });
         } else {
-          // Uninvited public signup creates a pending client awaiting Owner activation
-          const user = await this.prisma.user.create({
-            data: {
+          const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();
+          const isStephen = email.toLowerCase() === adminEmail;
+
+          // Uninvited public signup creates a pending client awaiting Admin activation; Stephen is automatically activated as Owner/Admin
+          const user = await this.prisma.user.upsert({
+            where: { email },
+            update: {
+              clerkUserId,
+              name: fullName,
+              ...(isStephen ? { role: 'Owner', status: 'ACTIVE', mfaEnforced: true } : {}),
+            },
+            create: {
               clerkUserId,
               email,
               name: fullName,
-              role: 'Client',
-              status: 'PENDING_APPROVAL',
+              role: isStephen ? 'Owner' : 'Client',
+              status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
+              mfaEnforced: isStephen,
               profile: {
                 create: {
                   timezone: 'Africa/Lagos',

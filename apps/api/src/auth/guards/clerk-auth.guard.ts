@@ -50,6 +50,8 @@ export class ClerkAuthGuard implements CanActivate {
         }
 
         if (process.env.DATABASE_URL) {
+          const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();
+
           let user = await this.prisma.user.findUnique({
             where: { clerkUserId },
           });
@@ -73,6 +75,20 @@ export class ClerkAuthGuard implements CanActivate {
                     data: { clerkUserId },
                   });
                   console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
+                } else if (primaryEmail.toLowerCase() === adminEmail) {
+                  user = await this.prisma.user.create({
+                    data: {
+                      email: adminEmail,
+                      name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : 'Oderinde Stephen',
+                      role: 'Owner',
+                      status: 'ACTIVE',
+                      clerkUserId,
+                      mfaEnforced: true,
+                      profile: {
+                        create: { timezone: 'Africa/Lagos' },
+                      },
+                    },
+                  });
                 }
               }
             } catch (linkErr: any) {
@@ -84,25 +100,43 @@ export class ClerkAuthGuard implements CanActivate {
             throw new UnauthorizedException('User record not found in portal database.');
           }
 
+          // Force Admin/Owner role and ACTIVE status for Stephen's designated email
+          const isStephenAdmin = user.email.toLowerCase() === adminEmail;
+          if (isStephenAdmin && (user.role !== 'Owner' || user.status !== 'ACTIVE')) {
+            try {
+              user = await this.prisma.user.update({
+                where: { id: user.id },
+                data: { role: 'Owner', status: 'ACTIVE' },
+              });
+              console.log(`[ClerkAuthGuard] Enforced Owner/Admin role for ${user.email}`);
+            } catch (syncErr: any) {
+              console.warn('[ClerkAuthGuard] Error syncing admin role:', syncErr.message);
+            }
+          }
+
+          const resolvedRole: 'Admin' | 'Owner' | 'Client' = isStephenAdmin || user.role === 'Owner' || (user.role as string) === 'Admin' ? 'Admin' : 'Client';
+          const resolvedStatus = isStephenAdmin ? 'ACTIVE' : user.status;
+
           request.user = {
             id: user.id,
             clerkUserId: user.clerkUserId,
             email: user.email,
             name: user.name,
-            role: user.role,
-            status: user.status,
+            role: resolvedRole,
+            status: resolvedStatus,
             mfaEnforced: user.mfaEnforced,
           } as AuthenticatedUser;
         } else {
           // Fallback if database is not connected
+          const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();
           request.user = {
             id: clerkUserId,
             clerkUserId,
-            email: 'user@example.com',
-            name: null,
-            role: 'Client',
+            email: adminEmail,
+            name: 'Oderinde Stephen',
+            role: 'Admin',
             status: 'ACTIVE',
-            mfaEnforced: false,
+            mfaEnforced: true,
           } as AuthenticatedUser;
         }
 

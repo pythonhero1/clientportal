@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
 import { setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
-import { determineAuthenticatedRedirect, fetchAuthenticatedUser } from '../../../services/auth-routing';
+import { determineAuthenticatedRedirect, fetchAuthenticatedUser, isAdministrator } from '../../../services/auth-routing';
 
 export const SignInPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -31,7 +31,7 @@ export const SignInPage: React.FC = () => {
         }
         const { user } = await fetchAuthenticatedUser(token);
         if (isMounted) {
-          if (user && (user.role === 'Admin' || user.role === 'Owner')) {
+          if (isAdministrator(user)) {
             window.location.href = '/admin';
             return;
           }
@@ -57,11 +57,15 @@ export const SignInPage: React.FC = () => {
 
     // Role boundary validation: Administrator accounts cannot sign in through the client portal!
     const { user, errorStatus, errorCode } = await fetchAuthenticatedUser(token);
+    const isStephenOrAdmin =
+      isAdministrator(user) ||
+      email.trim().toLowerCase() === 'stephenoderinde@gmail.com' ||
+      user?.email?.toLowerCase() === 'stephenoderinde@gmail.com';
 
-    if (user && (user.role === 'Admin' || user.role === 'Owner')) {
+    if (isStephenOrAdmin) {
       await clerk.signOut().catch(() => {});
       setAuthToken(null);
-      setError('Access restricted: Administrator accounts cannot sign in through the Client portal. Please use the Admin login at portal.oderindestephen.com/admin.');
+      setError('Access restricted: stephenoderinde@gmail.com is an Administrator account and cannot sign in through the Client portal. Please use the Admin login at portal.oderindestephen.com/admin.');
       setIsLoading(false);
       return;
     }
@@ -126,6 +130,12 @@ export const SignInPage: React.FC = () => {
     try {
       if (!email.trim() || !password) {
         setError('Please enter both email and password.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (email.trim().toLowerCase() === 'stephenoderinde@gmail.com') {
+        setError('Access restricted: stephenoderinde@gmail.com is an Administrator account and cannot sign in through the Client portal. Please use the Admin login at portal.oderindestephen.com/admin.');
         setIsLoading(false);
         return;
       }

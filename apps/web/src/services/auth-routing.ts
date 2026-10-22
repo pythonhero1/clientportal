@@ -39,6 +39,15 @@ export async function fetchAuthenticatedUser(token?: string | null): Promise<{
   }
 }
 
+export function isAdministrator(user?: { email?: string; role?: string } | null): boolean {
+  if (!user) return false;
+  return (
+    user.role === 'Admin' ||
+    user.role === 'Owner' ||
+    user.email?.toLowerCase() === 'stephenoderinde@gmail.com'
+  );
+}
+
 /**
  * Determines the target redirect URL for an authenticated user based on:
  * - Admin role -> /admin
@@ -58,7 +67,7 @@ export async function determineAuthenticatedRedirect(token?: string | null): Pro
   }
 
   if (user) {
-    const isAdmin = user.role === 'Admin' || user.role === 'Owner';
+    const isAdmin = isAdministrator(user);
     if (isAdmin) {
       return '/admin';
     }

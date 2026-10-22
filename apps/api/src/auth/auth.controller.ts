@@ -61,13 +61,26 @@ export class AuthController {
       };
     }
 
+    const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();
+    const isStephenAdmin = dbUser.email.toLowerCase() === adminEmail;
+
+    if (isStephenAdmin && (dbUser.role !== 'Owner' || dbUser.status !== 'ACTIVE')) {
+      this.prisma.user.update({
+        where: { id: dbUser.id },
+        data: { role: 'Owner', status: 'ACTIVE' },
+      }).catch(() => {});
+    }
+
+    const resolvedRole = isStephenAdmin || dbUser.role === 'Owner' || (dbUser.role as string) === 'Admin' ? 'Admin' : 'Client';
+    const resolvedStatus = isStephenAdmin ? 'ACTIVE' : dbUser.status;
+
     return {
       id: dbUser.id,
       clerkUserId: dbUser.clerkUserId,
       email: dbUser.email,
       name: dbUser.name,
-      role: dbUser.role === 'Owner' || (dbUser.role as string) === 'Admin' ? 'Admin' : 'Client',
-      status: dbUser.status,
+      role: resolvedRole,
+      status: resolvedStatus,
       mfaEnforced: dbUser.mfaEnforced,
       profile: dbUser.profile
         ? {
