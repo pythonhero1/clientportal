@@ -1,4 +1,4 @@
-import { getAuthHeaders } from './projects-api';
+import { getAuthHeaders, getFreshAuthHeaders } from './projects-api';
 import { API_BASE_URL } from './api-client';
 
 export interface NotificationItem {
@@ -44,8 +44,9 @@ export async function fetchNotifications(
   }
 
   const queryString = params.toString() ? `?${params.toString()}` : '';
+  const headers = await getFreshAuthHeaders();
   const res = await fetch(`${API_BASE_URL}/api/notifications${queryString}`, {
-    headers: getAuthHeaders(),
+    headers,
   });
 
   const contentType = res.headers.get('content-type') || '';
@@ -57,8 +58,9 @@ export async function fetchNotifications(
 }
 
 export async function fetchUnreadCount(): Promise<number> {
+  const headers = await getFreshAuthHeaders();
   const res = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
-    headers: getAuthHeaders(),
+    headers,
   });
 
   const contentType = res.headers.get('content-type') || '';

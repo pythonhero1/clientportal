@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -21,8 +21,14 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('users/pending')
-  async getPendingUsers() {
-    return this.usersService.getPendingUsers();
+  async getPendingUsers(@Query('sync') sync?: string) {
+    return this.usersService.getPendingUsers(sync === 'true');
+  }
+
+  @Post('users/sync-clerk')
+  @HttpCode(HttpStatus.OK)
+  async syncClerk() {
+    return this.usersService.forceSyncClerk();
   }
 
   @Get('users/clients')

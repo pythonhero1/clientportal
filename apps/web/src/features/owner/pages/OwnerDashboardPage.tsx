@@ -4,7 +4,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { Users, FolderKanban, FileCheck2, CreditCard, Shield, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../../../services/api-client';
-import { getAuthHeaders } from '../../../services/projects-api';
+import { getFreshAuthHeaders } from '../../../services/projects-api';
 
 export const OwnerDashboardPage: React.FC = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
@@ -16,7 +16,7 @@ export const OwnerDashboardPage: React.FC = () => {
   useEffect(() => {
     async function loadMetrics() {
       try {
-        const headers = getAuthHeaders();
+        const headers = await getFreshAuthHeaders();
         const [usersRes, projsRes, filesRes, invRes] = await Promise.allSettled([
           fetch(`${API_BASE_URL}/api/admin/users/pending`, { headers }),
           fetch(`${API_BASE_URL}/api/admin/projects`, { headers }),

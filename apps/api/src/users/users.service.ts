@@ -16,19 +16,46 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    const secretKey = (this.configService.get<string>('CLERK_SECRET_KEY') || '').trim().replace(/^['"]|['"]$/g, '');
+    const secretKey = (
+      process.env.CLERK_SECRET_KEY ||
+      this.configService.get<string>('CLERK_SECRET_KEY') ||
+      ''
+    ).trim().replace(/^['"]|['"]$/g, '');
     if (secretKey) {
       this.clerkClient = createClerkClient({ secretKey });
     }
   }
 
-  async syncClerkUsers() {
-    if (!this.clerkClient || !process.env.DATABASE_URL) return;
+  private getClerkClient(): ReturnType<typeof createClerkClient> | null {
+    if (!this.clerkClient) {
+      const secretKey = (
+        process.env.CLERK_SECRET_KEY ||
+        this.configService?.get<string>('CLERK_SECRET_KEY') ||
+        ''
+      ).trim().replace(/^['"]|['"]$/g, '');
 
-    // 30-second debounce window to prevent rate limit issues
+      if (secretKey) {
+        this.clerkClient = createClerkClient({ secretKey });
+        this.logger.log('Clerk client initialized successfully.');
+      }
+    }
+    return this.clerkClient;
+  }
+
+  async syncClerkUsers(force = false) {
+    const clerk = this.getClerkClient();
+    if (!clerk) {
+      this.logger.warn('[syncClerkUsers] Cannot sync users: CLERK_SECRET_KEY is missing from environment.');
+      return { syncedCount: 0, error: 'CLERK_SECRET_KEY is missing' };
+    }
+
+    if (!process.env.DATABASE_URL) {
+      return { syncedCount: 0 };
+    }
+
     const now = Date.now();
-    if (now - this.lastClerkSyncTimestamp < 30_000) {
-      return;
+    if (!force && now - this.lastClerkSyncTimestamp < 10_000) {
+      return { syncedCount: 0, debounced: true };
     }
     this.lastClerkSyncTimestamp = now;
 
@@ -39,28 +66,56 @@ export class UsersService {
         'stephenoderinde@gmail.com'
       ).toLowerCase();
 
-      const clerkUsersResponse = await this.clerkClient.users.getUserList({ limit: 100 });
-      const clerkUsers = (clerkUsersResponse as any)?.data || clerkUsersResponse;
-
-      if (!Array.isArray(clerkUsers)) return;
-
-      // Find owner record to receive notifications
-      const owner = await this.prisma.user.findFirst({
+      // Ensure Owner record exists in PostgreSQL
+      let owner = await this.prisma.user.findFirst({
         where: {
           OR: [{ role: 'Owner' }, { email: adminEmail }],
         },
       });
 
+      if (!owner) {
+        owner = await this.prisma.user.upsert({
+          where: { email: adminEmail },
+          update: { role: 'Owner', status: 'ACTIVE' },
+          create: {
+            clerkUserId: 'clerk_owner_admin',
+            email: adminEmail,
+            name: 'Stephen Oderinde',
+            role: 'Owner',
+            status: 'ACTIVE',
+            mfaEnforced: true,
+            profile: {
+              create: { timezone: 'Africa/Lagos' },
+            },
+          },
+        });
+      }
+
+      this.logger.log('[syncClerkUsers] Fetching user list from Clerk API...');
+      const clerkUsersResponse = await clerk.users.getUserList({ limit: 100 });
+      const clerkUsers = (clerkUsersResponse as any)?.data || clerkUsersResponse;
+
+      if (!Array.isArray(clerkUsers)) {
+        this.logger.warn('[syncClerkUsers] Clerk response was not an array');
+        return { syncedCount: 0 };
+      }
+
+      this.logger.log(`[syncClerkUsers] Discovered ${clerkUsers.length} user(s) in Clerk.`);
+      let syncedCount = 0;
+
       for (const cu of clerkUsers) {
-        const primaryEmail = (
-          cu.emailAddresses?.find((e: any) => e.id === cu.primaryEmailAddressId)?.emailAddress ||
-          cu.emailAddresses?.[0]?.emailAddress
-        )?.toLowerCase();
+        // Robust email extraction
+        const emails = Array.isArray(cu.emailAddresses) ? cu.emailAddresses : [];
+        const primary = emails.find((e: any) => e.id === cu.primaryEmailAddressId);
+        const emailObj = primary || emails[0];
+        const primaryEmail = (emailObj?.emailAddress || emailObj?.email_address || '').trim().toLowerCase();
 
         if (!primaryEmail) continue;
 
         const isStephen = primaryEmail === adminEmail;
-        const name = cu.firstName ? `${cu.firstName} ${cu.lastName || ''}`.trim() : null;
+        const firstName = cu.firstName || (cu as any).first_name || '';
+        const lastName = cu.lastName || (cu as any).last_name || '';
+        const name = `${firstName} ${lastName}`.trim() || null;
 
         // Check if user already exists in DB by clerkUserId or email
         const existing = await this.prisma.user.findFirst({
@@ -70,22 +125,21 @@ export class UsersService {
         });
 
         if (!existing) {
-          // Newly registered user in Clerk!
           const newUser = await this.prisma.user.create({
             data: {
               clerkUserId: cu.id,
               email: primaryEmail,
-              name,
+              name: isStephen ? (name || 'Stephen Oderinde') : name,
               role: isStephen ? 'Owner' : 'Client',
               status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
               mfaEnforced: isStephen,
               profile: {
-                create: {
-                  timezone: 'Africa/Lagos',
-                },
+                create: { timezone: 'Africa/Lagos' },
               },
             },
           });
+
+          syncedCount++;
 
           await this.prisma.auditLog.create({
             data: {
@@ -103,7 +157,6 @@ export class UsersService {
             },
           });
 
-          // If a new client is awaiting approval, create the admin notification
           if (!isStephen && owner) {
             await this.prisma.notification.create({
               data: {
@@ -114,30 +167,57 @@ export class UsersService {
                 link: '/admin/clients',
                 data: { userId: newUser.id, email: primaryEmail },
               },
-            }).catch((notifErr) => {
-              this.logger.warn(`Failed to dispatch owner notification: ${notifErr.message}`);
-            });
+            }).catch(() => {});
           }
         } else {
-          // If user exists, update clerkUserId if unlinked or outdated
+          // If user exists, sync clerkUserId or role
           if (existing.clerkUserId !== cu.id) {
             await this.prisma.user.update({
               where: { id: existing.id },
               data: { clerkUserId: cu.id },
             });
           }
-          // If it is Stephen, ensure role is Owner and ACTIVE
           if (isStephen && (existing.role !== 'Owner' || existing.status !== 'ACTIVE')) {
             await this.prisma.user.update({
               where: { id: existing.id },
               data: { role: 'Owner', status: 'ACTIVE' },
             });
           }
+
+          // Ensure an unread notification exists for any pending client
+          if (existing.status === 'PENDING_APPROVAL' && !isStephen && owner) {
+            const hasNotif = await this.prisma.notification.findFirst({
+              where: {
+                userId: owner.id,
+                type: 'SYSTEM_ALERT',
+                message: { contains: primaryEmail },
+              },
+            });
+            if (!hasNotif) {
+              await this.prisma.notification.create({
+                data: {
+                  userId: owner.id,
+                  type: 'SYSTEM_ALERT',
+                  title: 'New Client Registration',
+                  message: `${existing.name || primaryEmail} has registered and is awaiting your approval.`,
+                  link: '/admin/clients',
+                  data: { userId: existing.id, email: primaryEmail },
+                },
+              }).catch(() => {});
+            }
+          }
         }
       }
+
+      return { syncedCount, totalClerkUsers: clerkUsers.length };
     } catch (err: any) {
-      this.logger.warn(`Clerk user synchronization error: ${err.message}`);
+      this.logger.error(`Clerk user synchronization error: ${err.message}`, err.stack);
+      return { syncedCount: 0, error: err.message };
     }
+  }
+
+  async forceSyncClerk() {
+    return this.syncClerkUsers(true);
   }
 
   async getProfile(userId: string) {
@@ -382,12 +462,12 @@ export class UsersService {
     return { id: updatedUser.id, status: updatedUser.status };
   }
 
-  async getPendingUsers() {
+  async getPendingUsers(forceSync = false) {
     if (!process.env.DATABASE_URL) {
       return [];
     }
 
-    await this.syncClerkUsers();
+    await this.syncClerkUsers(forceSync);
 
     const users = await this.prisma.user.findMany({
       where: { status: 'PENDING_APPROVAL' },

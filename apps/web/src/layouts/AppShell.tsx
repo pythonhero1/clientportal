@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { MobileDrawer } from './components/MobileDrawer';
-import { getAuthToken, API_BASE_URL } from '../services/api-client';
+import { getAuthToken, setAuthToken, API_BASE_URL } from '../services/api-client';
 import { loadClerk } from '../services/clerk-client';
 
 export interface AppShellProps {
@@ -45,6 +45,12 @@ export const AppShell: React.FC<AppShellProps> = ({
             clerk.user.fullName ||
             (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : userName);
           setCurrentUser({ name, email });
+        }
+
+        if (clerk?.session) {
+          clerk.session.getToken().then((freshToken: string | null) => {
+            if (freshToken) setAuthToken(freshToken);
+          }).catch(() => {});
         }
 
         const token = getAuthToken();
@@ -91,6 +97,17 @@ export const AppShell: React.FC<AppShellProps> = ({
           }
         }
       });
+    const refreshTimer = setInterval(async () => {
+      const win = window as any;
+      if (win.Clerk?.session) {
+        try {
+          const fresh = await win.Clerk.session.getToken();
+          if (fresh) setAuthToken(fresh);
+        } catch {}
+      }
+    }, 45_000);
+
+    return () => clearInterval(refreshTimer);
   }, [location.pathname, navigate, userName, userEmail]);
 
   // If user is Stephen or path starts with /admin, force role="Admin"

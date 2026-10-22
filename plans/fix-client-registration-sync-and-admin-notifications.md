@@ -99,8 +99,21 @@ APPROVED and IN PROGRESS.
   - Converted internal links from legacy `/owner/*` to `/admin/*` (`/admin/clients`, `/admin/projects`, `/admin/files`, `/admin/invoices`).
 - Updated `apps/web/src/services/auth-routing.ts`:
   - Added direct redirect to `/pending-approval` when `user.status === 'PENDING_APPROVAL'`.
+- Updated `apps/web/src/services/api-client.ts` & `projects-api.ts`:
+  - Implemented `getFreshAuthToken()` and `getFreshAuthHeaders()` to dynamically refresh Clerk session tokens and eliminate 401 Unauthorized errors caused by 60-second Clerk JWT expirations.
+- Updated `apps/web/src/layouts/AppShell.tsx`:
+  - Added 45-second background token refresh interval so user session tokens in localStorage remain continuously valid.
+- Updated `apps/api/src/users/users.service.ts`:
+  - Ensured dynamic initialization of `clerkClient` using `process.env.CLERK_SECRET_KEY` and fallback `configService`.
+  - Added robust email extraction and automatic owner bootstrap.
+  - Added `forceSyncClerk()` and retroactive notification generation for existing pending clients.
+- Updated `apps/api/src/users/users.controller.ts`:
+  - Added `POST /api/admin/users/sync-clerk` endpoint and query parameter `?sync=true` on `GET /api/admin/users/pending`.
+- Updated `apps/web/src/features/owner/pages/OwnerClientsPage.tsx`:
+  - Added interactive "Sync from Clerk" button calling `POST /api/admin/users/sync-clerk`.
+  - Added explicit error banners instead of silently hiding API errors.
 - Verified `@os-portal/api` build: Exit code 0 (`nest build`).
-- Verified `@os-portal/web` build: Exit code 0 (`tsc -b && vite build` built in 2.72s).
+- Verified `@os-portal/web` build: Exit code 0 (`tsc -b && vite build`).
 - Verified `@os-portal/web` unit tests: 16 test files passed, 86 unit tests passed (100%).
 - Verified memory integrity: `tools/check-memory.py` returned `7 pass, 0 warn, 0 fail`.
 

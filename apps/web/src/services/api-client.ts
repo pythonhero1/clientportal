@@ -29,6 +29,24 @@ export function getAuthToken(): string | null {
   return activeAuthToken || (typeof window !== 'undefined' ? localStorage.getItem('portal_auth_token') : null);
 }
 
+export async function getFreshAuthToken(): Promise<string | null> {
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.Clerk?.session) {
+      try {
+        const token = await win.Clerk.session.getToken();
+        if (token) {
+          setAuthToken(token);
+          return token;
+        }
+      } catch (err) {
+        console.warn('Failed to refresh Clerk session token:', err);
+      }
+    }
+  }
+  return getAuthToken();
+}
+
 export function apiUrl(path: string): string {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${cleanPath}`;
