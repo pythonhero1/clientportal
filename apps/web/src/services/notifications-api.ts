@@ -1,4 +1,5 @@
 import { getAuthHeaders } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export interface NotificationItem {
   id: string;
@@ -43,23 +44,25 @@ export async function fetchNotifications(
   }
 
   const queryString = params.toString() ? `?${params.toString()}` : '';
-  const res = await fetch(`/api/notifications${queryString}`, {
+  const res = await fetch(`${API_BASE_URL}/api/notifications${queryString}`, {
     headers: getAuthHeaders(),
   });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch notifications');
+  const contentType = res.headers.get('content-type') || '';
+  if (!res.ok || contentType.includes('text/html')) {
+    return { items: [], total: 0, unreadCount: 0 };
   }
 
   return res.json();
 }
 
 export async function fetchUnreadCount(): Promise<number> {
-  const res = await fetch('/api/notifications/unread-count', {
+  const res = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
     headers: getAuthHeaders(),
   });
 
-  if (!res.ok) {
+  const contentType = res.headers.get('content-type') || '';
+  if (!res.ok || contentType.includes('text/html')) {
     return 0;
   }
 

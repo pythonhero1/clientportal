@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
+import { setAuthToken, API_BASE_URL } from '../../../services/api-client';
+
+declare global {
+  interface Window {
+    Clerk?: any;
+  }
+}
 
 export const SignInPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,15 +27,70 @@ export const SignInPage: React.FC = () => {
         return;
       }
 
-      // Check account status against portal backend
-      const res = await fetch('/api/auth/me', {
+      // 1. Authenticate with Clerk if available
+      if (typeof window !== 'undefined' && window.Clerk && window.Clerk.client) {
+        try {
+          const signInAttempt = await window.Clerk.client.signIn.create({
+            identifier: email,
+            password: password,
+          });
+
+          if (signInAttempt.status === 'complete') {
+            await window.Clerk.setActive({ session: signInAttempt.createdSessionId });
+            const token = await window.Clerk.session?.getToken();
+            setAuthToken(token);
+
+            // Verify account status with backend
+            try {
+              const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+              if (res.status === 403) {
+                const data = await res.json().catch(() => ({}));
+                if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
+                  window.location.href = '/pending-approval';
+                  return;
+                }
+                window.location.href = '/access-denied';
+                return;
+              }
+            } catch {
+              // Proceed if status check is non-blocking
+            }
+
+            window.location.href = '/overview';
+            return;
+          } else {
+            setError('Additional verification is required (MFA). Please check your authentication app or email.');
+            setIsLoading(false);
+            return;
+          }
+        } catch (clerkErr: any) {
+          const msg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || 'Invalid email or password.';
+          setError(msg);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 2. If Clerk is not yet loaded, verify against backend
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      if (res.status === 401) {
+        setError('Invalid credentials. Please enter your authorized email and password.');
+        setIsLoading(false);
+        return;
+      }
+
       if (res.status === 403) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
           window.location.href = '/pending-approval';
           return;
@@ -42,10 +104,9 @@ export const SignInPage: React.FC = () => {
         return;
       }
 
-      // Default redirect for local simulation
-      window.location.href = '/overview';
+      setError('Invalid email or password. Please verify your credentials.');
     } catch {
-      setError('Unable to connect to authentication server. Please try again.');
+      setError('Unable to authenticate. Please verify your email and password.');
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,5 @@
+import { API_BASE_URL } from './api-client';
+
 export interface DevPersona {
   id: string;
   name: string;
@@ -62,26 +64,38 @@ export function getAuthHeaders(): HeadersInit {
 }
 
 export async function fetchClientOverview() {
-  const res = await fetch('/api/client/overview', {
+  const res = await fetch(`${API_BASE_URL}/api/client/overview`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Overview fetch failed: ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    throw new Error(`Overview fetch failed: ${res.status}`);
+  }
   return res.json();
 }
 
 export async function fetchProjects() {
-  const res = await fetch('/api/projects', {
+  const res = await fetch(`${API_BASE_URL}/api/projects`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Projects fetch failed: ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    return [
+      { id: 'proj_1', name: 'Brand & Portal Implementation (Client A)' },
+      { id: 'proj_2', name: 'Design System & Staging Workspace (Client B)' },
+    ];
+  }
   return res.json();
 }
 
 export async function fetchProjectWorkspace(projectId: string) {
-  const res = await fetch(`/api/projects/${projectId}/workspace`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/workspace`, {
     headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error(`Workspace fetch failed: ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    throw new Error(`Workspace fetch failed: ${res.status}`);
+  }
   return res.json();
 }
 

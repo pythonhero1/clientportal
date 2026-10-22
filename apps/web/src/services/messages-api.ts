@@ -1,4 +1,5 @@
 import { getAuthHeaders, getActivePersona } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export interface MessageAttachmentDto {
   id: string;
@@ -60,7 +61,7 @@ export interface ConversationDto {
   messages?: MessageDto[];
 }
 
-const API_BASE = '/api';
+const API_BASE = `${API_BASE_URL}/api`;
 
 export const messagesApi = {
   async listConversations(): Promise<ConversationDto[]> {
@@ -68,7 +69,8 @@ export const messagesApi = {
       const res = await fetch(`${API_BASE}/conversations`, {
         headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error('Failed to fetch conversations');
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok || ct.includes('text/html')) throw new Error('Failed to fetch conversations');
       return await res.json();
     } catch {
       // Fallback fixture for standalone mock preview

@@ -1,4 +1,5 @@
 import { getAuthHeaders } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export interface TicketItem {
   id: string;
@@ -64,12 +65,13 @@ export interface HelpArticleItem {
 
 export async function fetchMyTickets(status?: string): Promise<TicketItem[]> {
   const query = status ? `?status=${status}` : '';
-  const res = await fetch(`/api/support/tickets${query}`, {
+  const res = await fetch(`${API_BASE_URL}/api/support/tickets${query}`, {
     headers: getAuthHeaders(),
   });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch support tickets');
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    return [];
   }
 
   return res.json();

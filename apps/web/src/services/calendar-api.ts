@@ -1,4 +1,5 @@
 import { getAuthHeaders } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export type CalendarEventType = 'MEETING' | 'MILESTONE' | 'INVOICE' | 'CHECKPOINT';
 
@@ -29,15 +30,13 @@ export async function fetchProjectCalendar(
   if (month !== undefined) params.set('month', String(month));
   if (year !== undefined) params.set('year', String(year));
 
-  const res = await fetch(`/api/projects/${projectId}/calendar?${params.toString()}`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/calendar?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
 
-  if (!res.ok) {
-    if (res.status === 404) {
-      return { events: [], timezone: 'Africa/Lagos', projectId };
-    }
-    throw new Error('Failed to load project calendar events.');
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    return { events: [], timezone: 'Africa/Lagos', projectId };
   }
 
   return res.json();
@@ -47,12 +46,13 @@ export async function fetchOwnerCalendar(projectId?: string): Promise<ProjectCal
   const params = new URLSearchParams();
   if (projectId) params.set('projectId', projectId);
 
-  const res = await fetch(`/api/admin/calendar?${params.toString()}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/calendar?${params.toString()}`, {
     headers: getAuthHeaders(),
   });
 
-  if (!res.ok) {
-    throw new Error('Failed to load owner calendar events.');
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || ct.includes('text/html')) {
+    return { events: [], timezone: 'Africa/Lagos' };
   }
 
   return res.json();

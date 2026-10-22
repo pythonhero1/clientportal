@@ -1,4 +1,5 @@
 import { getAuthHeaders, getActivePersona } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export interface FileVersionDto {
   id: string;
@@ -73,7 +74,7 @@ export interface RequestUploadData {
   existingFileId?: string;
 }
 
-const API_BASE = '/api';
+const API_BASE = `${API_BASE_URL}/api`;
 
 // Fallback preview mock database for standalone UI dev and preview mode
 let inMemoryMockFiles: FileItemDto[] = [
@@ -394,23 +395,18 @@ function isOfflineOrGatewayError(status?: number): boolean {
 export const filesApi = {
   async listFiles(projectId: string, category?: string): Promise<FileItemDto[]> {
     try {
-      const url = new URL(`${API_BASE}/projects/${projectId}/files`, window.location.origin);
-      if (category) {
-        url.searchParams.set('category', category);
-      }
-      const res = await fetch(url.toString(), {
+      const fullUrl = `${API_BASE}/projects/${projectId}/files${category ? `?category=${encodeURIComponent(category)}` : ''}`;
+      const res = await fetch(fullUrl, {
         headers: getAuthHeaders(),
       });
 
-      if (!res.ok) {
-        if (isOfflineOrGatewayError(res.status)) {
-          console.warn(`[filesApi] API server error (${res.status}). Serving preview fallback files.`);
-          return this.getMockList(category);
-        }
-        throw new Error(`Failed to load project files (${res.status})`);
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        console.warn(`[filesApi] API returned status ${res.status} or HTML. Serving preview fallback files.`);
+        return this.getMockList(category);
       }
 
-      return res.json();
+      return await res.json();
     } catch (err: any) {
       console.warn('[filesApi] Serving preview fallback files:', err.message);
       return this.getMockList(category);
@@ -428,14 +424,13 @@ export const filesApi = {
       const res = await fetch(`${API_BASE}/projects/${projectId}/files/${fileId}`, {
         headers: getAuthHeaders(),
       });
-      if (!res.ok) {
-        if (isOfflineOrGatewayError(res.status)) {
-          const match = inMemoryMockFiles.find((f) => f.id === fileId);
-          if (match) return match;
-        }
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        const match = inMemoryMockFiles.find((f) => f.id === fileId);
+        if (match) return match;
         throw new Error(`Failed to load file details (${res.status})`);
       }
-      return res.json();
+      return await res.json();
     } catch (err: any) {
       const match = inMemoryMockFiles.find((f) => f.id === fileId);
       if (match) return match;

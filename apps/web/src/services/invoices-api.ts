@@ -1,4 +1,5 @@
 import { getAuthHeaders, getActivePersona } from './projects-api.js';
+import { API_BASE_URL } from './api-client.js';
 
 export interface InvoiceItemRecord {
   id: string;
@@ -213,37 +214,26 @@ function getMockLedger(filters?: { status?: string; projectId?: string; clientId
 
 export async function fetchProjectInvoices(projectId: string): Promise<InvoiceRecord[]> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/invoices`, {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/invoices`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      if (res.status === 404) {
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      if (res.status === 404 && !contentType.includes('text/html')) {
         throw new Error('NOT_BILLING_CONTACT');
       }
-      if (isOfflineOrGatewayError(res.status)) {
-        const persona = getActivePersona();
-        if (persona.id === 'client_c') {
-          throw new Error('NOT_BILLING_CONTACT');
-        }
-        return inMemoryMockInvoices.filter((i) => i.projectId === projectId || projectId === 'proj_default');
+      const persona = getActivePersona();
+      if (persona.id === 'client_c') {
+        throw new Error('NOT_BILLING_CONTACT');
       }
-      throw new Error(`Failed to load invoices (${res.status})`);
+      return inMemoryMockInvoices.filter((i) => i.projectId === projectId || projectId === 'proj_default');
     }
     return await res.json();
   } catch (err: any) {
     if (err.message === 'NOT_BILLING_CONTACT') throw err;
-    if (err.message && err.message.includes('502')) {
-      const persona = getActivePersona();
-      if (persona.id === 'client_c') throw new Error('NOT_BILLING_CONTACT');
-      return inMemoryMockInvoices.filter((i) => i.projectId === projectId || projectId === 'proj_default');
-    }
-    if (err instanceof TypeError || (err.message && err.message.toLowerCase().includes('fetch'))) {
-      console.warn('[invoicesApi] Backend unreachable. Serving preview fallback invoices.');
-      const persona = getActivePersona();
-      if (persona.id === 'client_c') throw new Error('NOT_BILLING_CONTACT');
-      return inMemoryMockInvoices.filter((i) => i.projectId === projectId || projectId === 'proj_default');
-    }
-    throw err;
+    const persona = getActivePersona();
+    if (persona.id === 'client_c') throw new Error('NOT_BILLING_CONTACT');
+    return inMemoryMockInvoices.filter((i) => i.projectId === projectId || projectId === 'proj_default');
   }
 }
 

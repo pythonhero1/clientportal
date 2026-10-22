@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
+import { API_BASE_URL } from '../../../services/api-client';
+
+declare global {
+  interface Window {
+    Clerk?: any;
+  }
+}
 
 export const SignUpPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -23,9 +30,33 @@ export const SignUpPage: React.FC = () => {
         return;
       }
 
+      if (typeof window !== 'undefined' && window.Clerk && window.Clerk.client) {
+        try {
+          const names = fullName.trim().split(' ');
+          const firstName = names[0];
+          const lastName = names.slice(1).join(' ') || undefined;
+
+          await window.Clerk.client.signUp.create({
+            emailAddress: email,
+            password: password,
+            firstName,
+            lastName,
+          });
+
+          await window.Clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+          window.location.href = `/verify-email?email=${encodeURIComponent(email)}`;
+          return;
+        } catch (clerkErr: any) {
+          const msg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || 'Registration failed.';
+          setError(msg);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // If invitation token exists, accept invitation after signup
       if (invitationToken) {
-        const acceptRes = await fetch('/api/invitations/accept', {
+        const acceptRes = await fetch(`${API_BASE_URL}/api/invitations/accept`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: invitationToken }),

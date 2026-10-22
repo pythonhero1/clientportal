@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { MobileDrawer } from './components/MobileDrawer';
+import { getAuthToken } from '../services/api-client';
+
+declare global {
+  interface Window {
+    Clerk?: any;
+  }
+}
 
 export interface AppShellProps {
   role?: 'Owner' | 'Client';
@@ -17,6 +24,22 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Authentication guard: in production, require valid Clerk session or token
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      const token = getAuthToken();
+      if (window.Clerk && window.Clerk.isReady && !window.Clerk.user) {
+        navigate('/sign-in', { replace: true });
+        return;
+      }
+      if (!token && window.Clerk && window.Clerk.isReady && !window.Clerk.user) {
+        navigate('/sign-in', { replace: true });
+        return;
+      }
+    }
+  }, [location.pathname, navigate]);
 
   // If path starts with /owner, force role="Owner"
   const activeRole: 'Owner' | 'Client' = location.pathname.startsWith('/owner')
