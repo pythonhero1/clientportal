@@ -10,8 +10,94 @@ export const SignInPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Multi-Factor Authentication states
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaStrategy, setMfaStrategy] = useState('totp');
+  const [mfaNotice, setMfaNotice] = useState('');
+
+  const handleCompleteSignIn = async (clerk: any, attempt: any) => {
+    await clerk.setActive({ session: attempt.createdSessionId });
+    const token = await clerk.session?.getToken();
+    if (token) {
+      setAuthToken(token);
+    }
+
+    // Verify account role and status with backend API
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
+          window.location.href = '/pending-approval';
+          return;
+        }
+        window.location.href = '/access-denied';
+        return;
+      }
+
+      if (res.ok) {
+        const me = await res.json().catch(() => null);
+        if (me && me.role === 'Owner') {
+          window.location.href = '/owner/overview';
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('[SignIn] Backend /auth/me lookup error:', apiErr);
+    }
+
+    // Default redirect for client users
+    window.location.href = '/overview';
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      if (!mfaCode.trim()) {
+        setError('Please enter the 6-digit verification code.');
+        setIsLoading(false);
+        return;
+      }
+
+      const clerk = await loadClerk();
+      const secondFactorResult = await clerk.client.signIn.attemptSecondFactor({
+        strategy: mfaStrategy,
+        code: mfaCode.trim(),
+      });
+
+      if (secondFactorResult.status === 'complete') {
+        await handleCompleteSignIn(clerk, secondFactorResult);
+        return;
+      } else {
+        setError('Verification code is incorrect or expired.');
+      }
+    } catch (err: any) {
+      const msg =
+        err.errors?.[0]?.longMessage ||
+        err.errors?.[0]?.message ||
+        'Verification code incorrect. Please try again.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mfaRequired) {
+      return handleMfaSubmit(e);
+    }
+
     setError(null);
     setIsLoading(true);
 
@@ -57,47 +143,38 @@ export const SignInPage: React.FC = () => {
       }
 
       if (signInAttempt && signInAttempt.status === 'complete') {
-        await clerk.setActive({ session: signInAttempt.createdSessionId });
-        const token = await clerk.session?.getToken();
-        if (token) {
-          setAuthToken(token);
-        }
-
-        // Verify account role and status with backend API
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-
-          if (res.status === 403) {
-            const data = await res.json().catch(() => ({}));
-            if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
-              window.location.href = '/pending-approval';
-              return;
-            }
-            window.location.href = '/access-denied';
-            return;
-          }
-
-          if (res.ok) {
-            const me = await res.json().catch(() => null);
-            if (me && me.role === 'Owner') {
-              window.location.href = '/owner/overview';
-              return;
-            }
-          }
-        } catch (apiErr) {
-          console.warn('[SignIn] Backend /auth/me lookup error:', apiErr);
-        }
-
-        // Default redirect for client users
-        window.location.href = '/overview';
+        await handleCompleteSignIn(clerk, signInAttempt);
         return;
       } else if (signInAttempt && signInAttempt.status === 'needs_second_factor') {
-        setError('Two-factor verification (MFA) required. Please check your authenticator or email.');
+        const factors = signInAttempt.supportedSecondFactors || [];
+        const hasEmail = factors.some((f: any) => f.strategy === 'email_code');
+        const hasTotp = factors.some((f: any) => f.strategy === 'totp');
+        const hasPhone = factors.some((f: any) => f.strategy === 'phone_code');
+
+        let chosenStrategy = 'totp';
+        if (hasEmail) {
+          chosenStrategy = 'email_code';
+          try {
+            await clerk.client.signIn.prepareSecondFactor({ strategy: 'email_code' });
+            setMfaNotice('A 6-digit verification code has been sent to your email.');
+          } catch (prepErr) {
+            console.warn('Could not prepare email code second factor:', prepErr);
+          }
+        } else if (hasTotp) {
+          chosenStrategy = 'totp';
+          setMfaNotice('Please enter the 6-digit code from your authenticator app.');
+        } else if (hasPhone) {
+          chosenStrategy = 'phone_code';
+          try {
+            await clerk.client.signIn.prepareSecondFactor({ strategy: 'phone_code' });
+            setMfaNotice('A verification code was sent to your phone.');
+          } catch {}
+        } else {
+          setMfaNotice('Please enter your two-factor verification code.');
+        }
+
+        setMfaStrategy(chosenStrategy);
+        setMfaRequired(true);
         setIsLoading(false);
         return;
       } else {
@@ -115,69 +192,113 @@ export const SignInPage: React.FC = () => {
 
   return (
     <AuthLayout
-      tag="CLIENT WORKSPACE"
-      title="Welcome back"
-      subtitle="Sign in to view active projects, files, invoices and updates."
+      tag={mfaRequired ? 'SECURITY VERIFICATION' : 'CLIENT WORKSPACE'}
+      title={mfaRequired ? 'Two-factor verification' : 'Welcome back'}
+      subtitle={
+        mfaRequired
+          ? mfaNotice || 'Enter your 6-digit code to complete sign-in.'
+          : 'Sign in to view active projects, files, invoices and updates.'
+      }
     >
       <form onSubmit={handleSubmit} style={formStyle}>
         {error && <div style={errorBannerStyle}>{error}</div>}
 
-        <div style={fieldGroupStyle}>
-          <label htmlFor="email" style={labelStyle}>
-            Email address
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@company.com"
-            required
-            style={inputStyle}
-          />
-        </div>
+        {mfaRequired ? (
+          <>
+            <div style={fieldGroupStyle}>
+              <label htmlFor="mfaCode" style={labelStyle}>
+                6-digit verification code
+              </label>
+              <input
+                id="mfaCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                placeholder="123456"
+                required
+                autoFocus
+                style={{ ...inputStyle, letterSpacing: '0.2em', fontSize: '1.25rem', textAlign: 'center' }}
+              />
+            </div>
 
-        <div style={fieldGroupStyle}>
-          <label htmlFor="password" style={labelStyle}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••••••"
-            required
-            style={inputStyle}
-          />
-        </div>
+            <button type="submit" disabled={isLoading} style={submitButtonStyle}>
+              {isLoading ? 'Verifying code...' : 'Confirm & Sign In'}
+            </button>
 
-        <div style={rememberForgotRowStyle}>
-          <label style={checkboxContainerStyle}>
-            <input
-              id="rememberMe"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              style={checkboxStyle}
-            />
-            <span style={checkboxLabelStyle}>Remember me</span>
-          </label>
-          <a href="/forgot-password" style={forgotLinkStyle}>
-            Forgot password?
-          </a>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMfaRequired(false);
+                setError(null);
+                setMfaCode('');
+              }}
+              style={{ ...signUpLinkStyle, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
+            >
+              &larr; Back to sign in
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={fieldGroupStyle}>
+              <label htmlFor="email" style={labelStyle}>
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                required
+                style={inputStyle}
+              />
+            </div>
 
-        <button type="submit" disabled={isLoading} style={submitButtonStyle}>
-          {isLoading ? 'Signing in...' : 'Sign in to portal'}
-        </button>
+            <div style={fieldGroupStyle}>
+              <label htmlFor="password" style={labelStyle}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                style={inputStyle}
+              />
+            </div>
 
-        <div style={footerLinkContainerStyle}>
-          <span style={footerTextStyle}>New client? </span>
-          <a href="/sign-up" style={signUpLinkStyle}>
-            Create your account &rarr;
-          </a>
-        </div>
+            <div style={rememberForgotRowStyle}>
+              <label style={checkboxContainerStyle}>
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={checkboxStyle}
+                />
+                <span style={checkboxLabelStyle}>Remember me</span>
+              </label>
+              <a href="/forgot-password" style={forgotLinkStyle}>
+                Forgot password?
+              </a>
+            </div>
+
+            <button type="submit" disabled={isLoading} style={submitButtonStyle}>
+              {isLoading ? 'Signing in...' : 'Sign in to portal'}
+            </button>
+
+            <div style={footerLinkContainerStyle}>
+              <span style={footerTextStyle}>New client? </span>
+              <a href="/sign-up" style={signUpLinkStyle}>
+                Create your account &rarr;
+              </a>
+            </div>
+          </>
+        )}
       </form>
     </AuthLayout>
   );
