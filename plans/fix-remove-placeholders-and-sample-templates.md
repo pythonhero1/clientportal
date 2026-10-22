@@ -1,7 +1,7 @@
 # Fix: Remove all placeholder data, demo fallbacks, and sample templates
 
 - Task: fix-remove-placeholders-and-sample-templates
-- Status: APPROVED
+- Status: IMPLEMENTED - AWAITING STEPHEN CONFIRMATION
 - Created: 2026-10-22
 - Updated: 2026-10-22
 - Workspace: one portal repository
@@ -79,7 +79,24 @@ READY FOR IMPLEMENTATION. Approved per Stephen's explicit instructions: "Remove 
 - Scope: Purge all prototype fixtures, sample data, and placeholder templates across frontend and backend.
 
 ## 10 Execution log
-- Implementation in progress.
+- Purged all hardcoded mock files in `files.service.ts` and `file-lifecycle.service.ts` (backend).
+- Purged seeded mock invoices in `invoices.service.ts` (backend).
+- Purged demo projects in `projects.service.ts` (backend).
+- Purged mock calendar events in `calendar.service.ts` and mock meetings in `meetings.service.ts` (backend).
+- Purged mock conversations and mock messages in `conversations.service.ts` and `messages-api.ts`.
+- Implemented real endpoints in `users.controller.ts` & `users.service.ts`: `GET /admin/users/pending`, `GET /admin/users/clients`, `POST /admin/users/:userId/reject`.
+- Purged mock arrays in `files-api.ts` and `invoices-api.ts` (frontend).
+- Updated `OwnerClientsPage.tsx` with live query to `/api/admin/users/pending`, dynamic activate/reject handlers, and empty state "No client registrations pending approval".
+- Updated `OwnerDashboardPage.tsx` with live metric fetches and clean 0 counts.
+- Updated `ProjectsListPage.tsx` to remove `fallbackProjects` array and render clean empty state "No active projects in workspace".
+- Updated `OverviewPage.tsx` to render real project milestones and documents or clean empty states, routing to `NoActiveProjectPage` if no project assigned.
+- Updated `QuestionnairePage.tsx` to clear pre-filled "Acme Retail Co." text and start with blank inputs.
+- Updated `ProjectWorkspacePage.tsx` to remove hardcoded deliverable card "v2.1 Wireframes & Component Specs" and render clean empty state.
+- Stripped all `placeholder="e.g. ..."` across forms and modals.
+- Built `@os-portal/api`: Exit code 0 (`nest build`).
+- Built `@os-portal/web`: Exit code 0 (`tsc -b && vite build`).
+- Tested `@os-portal/web`: 16 test files passed, 86 tests passed (100%).
+- Committed commit `87cc6e5` and pushed to GitHub `origin/main`.
 
 ## 11 Deviations
 - None.
