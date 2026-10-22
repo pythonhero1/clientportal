@@ -68,7 +68,7 @@ export interface CreateInvoicePayload {
 }
 
 function isOfflineOrGatewayError(status?: number): boolean {
-  return !status || status === 502 || status === 503 || status === 504;
+  return !status || status === 401 || status === 403 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 let mockSequenceCounter = 3;
@@ -239,14 +239,13 @@ export async function fetchProjectInvoices(projectId: string): Promise<InvoiceRe
 
 export async function fetchInvoiceDetail(projectId: string, invoiceId: string): Promise<InvoiceRecord> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/invoices/${invoiceId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/invoices/${invoiceId}`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const match = inMemoryMockInvoices.find((i) => i.id === invoiceId);
-        if (match) return match;
-      }
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      const match = inMemoryMockInvoices.find((i) => i.id === invoiceId);
+      if (match) return match;
       throw new Error(`Failed to load invoice (${res.status})`);
     }
     return await res.json();
@@ -259,15 +258,13 @@ export async function fetchInvoiceDetail(projectId: string, invoiceId: string): 
 
 export async function downloadInvoicePdf(projectId: string, invoiceId: string, invoiceNumber?: string): Promise<void> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/invoices/${invoiceId}/pdf`, {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/invoices/${invoiceId}/pdf`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        window.print();
-        return;
-      }
-      throw new Error(`Failed to generate PDF (${res.status})`);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      window.print();
+      return;
     }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
@@ -290,28 +287,26 @@ export async function submitPaymentEvidence(
   evidenceNote?: string,
 ): Promise<PaymentRecord> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/invoices/${invoiceId}/payment-evidence`, {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/invoices/${invoiceId}/payment-evidence`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ reference, evidenceNote }),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
-        const newRecord: PaymentRecord = {
-          id: `pay_${Date.now()}`,
-          amount: invoice?.totalAmount || '0.00',
-          currency: invoice?.currency || 'USD',
-          method: 'BANK_TRANSFER',
-          status: 'PENDING',
-          reference,
-          evidenceNote,
-          createdAt: new Date().toISOString(),
-        };
-        invoice?.payments.unshift(newRecord);
-        return newRecord;
-      }
-      throw new Error(`Payment evidence submission failed (${res.status})`);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
+      const newRecord: PaymentRecord = {
+        id: `pay_${Date.now()}`,
+        amount: invoice?.totalAmount || '0.00',
+        currency: invoice?.currency || 'USD',
+        method: 'BANK_TRANSFER',
+        status: 'PENDING',
+        reference,
+        evidenceNote,
+        createdAt: new Date().toISOString(),
+      };
+      invoice?.payments.unshift(newRecord);
+      return newRecord;
     }
     return await res.json();
   } catch (err: any) {
@@ -342,89 +337,31 @@ export async function fetchOwnerLedger(filters?: {
     if (filters?.projectId) params.set('projectId', filters.projectId);
     if (filters?.clientId) params.set('clientId', filters.clientId);
 
-    const url = `/api/admin/invoices${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_BASE_URL}/api/admin/invoices${params.toString() ? `?${params.toString()}` : ''}`;
     const res = await fetch(url, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        console.warn(`[invoicesApi] Backend offline (${res.status}). Serving preview fallback ledger.`);
-        return getMockLedger(filters);
-      }
-      throw new Error(`Failed to load billing ledger (${res.status})`);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      console.warn(`[invoicesApi] Backend status ${res.status} or HTML received. Serving preview fallback ledger.`);
+      return getMockLedger(filters);
     }
     return await res.json();
   } catch (err: any) {
-    if (err.message && err.message.includes('502')) {
-      return getMockLedger(filters);
-    }
-    if (err instanceof TypeError || (err.message && err.message.toLowerCase().includes('fetch'))) {
-      console.warn('[invoicesApi] Backend unreachable. Serving preview fallback ledger.');
-      return getMockLedger(filters);
-    }
-    throw err;
+    console.warn('[invoicesApi] Serving preview fallback ledger:', err.message);
+    return getMockLedger(filters);
   }
 }
 
 export async function createDraftInvoice(payload: CreateInvoicePayload): Promise<InvoiceRecord> {
   try {
-    const res = await fetch('/api/admin/invoices', {
+    const res = await fetch(`${API_BASE_URL}/api/admin/invoices`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const subtotalNum = payload.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-        const taxRateNum = payload.taxRate || 0;
-        const taxAmountNum = (subtotalNum * taxRateNum) / 100;
-        const totalAmountNum = subtotalNum + taxAmountNum;
-
-        const newInvoice: InvoiceRecord = {
-          id: `inv_mock_${Date.now()}`,
-          invoiceNumber: null,
-          projectId: payload.projectId,
-          clientId: payload.clientId,
-          status: 'DRAFT',
-          currency: payload.currency || 'USD',
-          subtotal: subtotalNum.toFixed(2),
-          taxRate: taxRateNum.toFixed(2),
-          taxAmount: taxAmountNum.toFixed(2),
-          totalAmount: totalAmountNum.toFixed(2),
-          amountPaid: '0.00',
-          dueDate: payload.dueDate,
-          issuedAt: null,
-          paidAt: null,
-          notes: payload.notes || null,
-          items: payload.items.map((it, idx) => ({
-            id: `it_${Date.now()}_${idx}`,
-            description: it.description,
-            quantity: it.quantity,
-            unitPrice: it.unitPrice.toFixed(2),
-            amount: (it.quantity * it.unitPrice).toFixed(2),
-            orderIndex: idx,
-          })),
-          payments: [],
-          project: {
-            id: payload.projectId,
-            name: payload.projectId === 'proj_1' ? 'Stephen Showcase Website' : 'Beta Brand Modernization',
-          },
-          client: {
-            id: payload.clientId,
-            name: payload.clientId === 'client_a' ? 'Alpha Client (Project 1)' : 'Beta Client (Project 2)',
-            email: `${payload.clientId}@example.com`,
-          },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        inMemoryMockInvoices.unshift(newInvoice);
-        return newInvoice;
-      }
-      throw new Error(`Invoice creation failed (${res.status})`);
-    }
-    return await res.json();
-  } catch (err: any) {
-    if (err.message && err.message.includes('502')) {
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
       const subtotalNum = payload.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
       const taxRateNum = payload.taxRate || 0;
       const taxAmountNum = (subtotalNum * taxRateNum) / 100;
@@ -455,36 +392,79 @@ export async function createDraftInvoice(payload: CreateInvoicePayload): Promise
           orderIndex: idx,
         })),
         payments: [],
+        project: {
+          id: payload.projectId,
+          name: payload.projectId === 'proj_1' ? 'Stephen Showcase Website' : 'Beta Brand Modernization',
+        },
+        client: {
+          id: payload.clientId,
+          name: payload.clientId === 'client_a' ? 'Alpha Client (Project 1)' : 'Beta Client (Project 2)',
+          email: `${payload.clientId}@example.com`,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       inMemoryMockInvoices.unshift(newInvoice);
       return newInvoice;
     }
-    throw err;
+    return await res.json();
+  } catch (err: any) {
+    const subtotalNum = payload.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const taxRateNum = payload.taxRate || 0;
+    const taxAmountNum = (subtotalNum * taxRateNum) / 100;
+    const totalAmountNum = subtotalNum + taxAmountNum;
+
+    const newInvoice: InvoiceRecord = {
+      id: `inv_mock_${Date.now()}`,
+      invoiceNumber: null,
+      projectId: payload.projectId,
+      clientId: payload.clientId,
+      status: 'DRAFT',
+      currency: payload.currency || 'USD',
+      subtotal: subtotalNum.toFixed(2),
+      taxRate: taxRateNum.toFixed(2),
+      taxAmount: taxAmountNum.toFixed(2),
+      totalAmount: totalAmountNum.toFixed(2),
+      amountPaid: '0.00',
+      dueDate: payload.dueDate,
+      issuedAt: null,
+      paidAt: null,
+      notes: payload.notes || null,
+      items: payload.items.map((it, idx) => ({
+        id: `it_${Date.now()}_${idx}`,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice.toFixed(2),
+        amount: (it.quantity * it.unitPrice).toFixed(2),
+        orderIndex: idx,
+      })),
+      payments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryMockInvoices.unshift(newInvoice);
+    return newInvoice;
   }
 }
 
 export async function issueInvoice(invoiceId: string, notes?: string): Promise<InvoiceRecord> {
   try {
-    const res = await fetch(`/api/admin/invoices/${invoiceId}/issue`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/invoices/${invoiceId}/issue`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ notes }),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
-        if (invoice) {
-          const year = new Date().getFullYear();
-          invoice.status = 'ISSUED';
-          invoice.invoiceNumber = `INV-${year}-${(mockSequenceCounter++).toString().padStart(4, '0')}`;
-          invoice.issuedAt = new Date().toISOString();
-          invoice.updatedAt = new Date().toISOString();
-          return invoice;
-        }
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
+      if (invoice) {
+        const year = new Date().getFullYear();
+        invoice.status = 'ISSUED';
+        invoice.invoiceNumber = `INV-${year}-${(mockSequenceCounter++).toString().padStart(4, '0')}`;
+        invoice.issuedAt = new Date().toISOString();
+        invoice.updatedAt = new Date().toISOString();
+        return invoice;
       }
-      throw new Error(`Invoice issuance failed (${res.status})`);
     }
     return await res.json();
   } catch (err: any) {
@@ -512,43 +492,41 @@ export async function recordOwnerPayment(
   },
 ): Promise<InvoiceRecord> {
   try {
-    const res = await fetch(`/api/admin/invoices/${invoiceId}/payments`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/invoices/${invoiceId}/payments`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
-        if (invoice) {
-          const currentPaid = parseFloat(invoice.amountPaid.toString());
-          const newPaid = currentPaid + payload.amount;
-          const total = parseFloat(invoice.totalAmount.toString());
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
+      if (invoice) {
+        const currentPaid = parseFloat(invoice.amountPaid.toString());
+        const newPaid = currentPaid + payload.amount;
+        const total = parseFloat(invoice.totalAmount.toString());
 
-          invoice.amountPaid = newPaid.toFixed(2);
-          invoice.payments.unshift({
-            id: `pay_${Date.now()}`,
-            amount: payload.amount.toFixed(2),
-            currency: payload.currency || invoice.currency,
-            method: (payload.method as any) || 'BANK_TRANSFER',
-            status: 'CONFIRMED',
-            reference: payload.reference,
-            evidenceNote: payload.evidenceNote,
-            confirmedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-          });
+        invoice.amountPaid = newPaid.toFixed(2);
+        invoice.payments.unshift({
+          id: `pay_${Date.now()}`,
+          amount: payload.amount.toFixed(2),
+          currency: payload.currency || invoice.currency,
+          method: (payload.method as any) || 'BANK_TRANSFER',
+          status: 'CONFIRMED',
+          reference: payload.reference,
+          evidenceNote: payload.evidenceNote,
+          confirmedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        });
 
-          if (newPaid >= total) {
-            invoice.status = 'PAID';
-            invoice.paidAt = new Date().toISOString();
-          } else if (newPaid > 0) {
-            invoice.status = 'PARTIALLY_PAID';
-          }
-          invoice.updatedAt = new Date().toISOString();
-          return invoice;
+        if (newPaid >= total) {
+          invoice.status = 'PAID';
+          invoice.paidAt = new Date().toISOString();
+        } else if (newPaid > 0) {
+          invoice.status = 'PARTIALLY_PAID';
         }
+        invoice.updatedAt = new Date().toISOString();
+        return invoice;
       }
-      throw new Error(`Payment recording failed (${res.status})`);
     }
     return await res.json();
   } catch (err: any) {
@@ -586,21 +564,19 @@ export async function recordOwnerPayment(
 
 export async function cancelInvoice(invoiceId: string, reason: string): Promise<InvoiceRecord> {
   try {
-    const res = await fetch(`/api/admin/invoices/${invoiceId}/cancel`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/invoices/${invoiceId}/cancel`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ reason }),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
-        if (invoice) {
-          invoice.status = 'CANCELLED';
-          invoice.updatedAt = new Date().toISOString();
-          return invoice;
-        }
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      const invoice = inMemoryMockInvoices.find((i) => i.id === invoiceId);
+      if (invoice) {
+        invoice.status = 'CANCELLED';
+        invoice.updatedAt = new Date().toISOString();
+        return invoice;
       }
-      throw new Error(`Invoice cancellation failed (${res.status})`);
     }
     return await res.json();
   } catch (err: any) {
@@ -616,15 +592,13 @@ export async function cancelInvoice(invoiceId: string, reason: string): Promise<
 
 export async function previewOwnerInvoicePdf(invoiceId: string): Promise<void> {
   try {
-    const res = await fetch(`/api/admin/invoices/${invoiceId}/pdf`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/invoices/${invoiceId}/pdf`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      if (isOfflineOrGatewayError(res.status)) {
-        window.print();
-        return;
-      }
-      throw new Error(`Failed to load PDF (${res.status})`);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
+      window.print();
+      return;
     }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);

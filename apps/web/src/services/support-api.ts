@@ -83,7 +83,7 @@ export async function createTicket(payload: {
   priority?: string;
   projectId?: string;
 }): Promise<TicketItem> {
-  const res = await fetch('/api/support/tickets', {
+  const res = await fetch(`${API_BASE_URL}/api/support/tickets`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -97,7 +97,7 @@ export async function createTicket(payload: {
 }
 
 export async function fetchTicketDetails(ticketId: string): Promise<TicketItem> {
-  const res = await fetch(`/api/support/tickets/${ticketId}`, {
+  const res = await fetch(`${API_BASE_URL}/api/support/tickets/${ticketId}`, {
     headers: getAuthHeaders(),
   });
 
@@ -115,7 +115,7 @@ export async function sendTicketMessage(
   ticketId: string,
   content: string,
 ): Promise<TicketMessageItem> {
-  const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+  const res = await fetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/messages`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ content }),
@@ -132,7 +132,7 @@ export async function updateTicketStatus(
   ticketId: string,
   status: string,
 ): Promise<TicketItem> {
-  const res = await fetch(`/api/support/tickets/${ticketId}/status`, {
+  const res = await fetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/status`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify({ status }),
@@ -146,39 +146,49 @@ export async function updateTicketStatus(
 }
 
 export async function fetchHelpCategories(): Promise<HelpCategoryItem[]> {
-  const res = await fetch('/api/support/help/categories', {
-    headers: getAuthHeaders(),
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/support/help/categories`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch help categories');
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+
+    return res.json();
+  } catch {
+    return [];
   }
-
-  return res.json();
 }
 
 export async function fetchHelpArticles(
   categoryId?: string,
   search?: string,
 ): Promise<HelpArticleItem[]> {
-  const params = new URLSearchParams();
-  if (categoryId) params.set('categoryId', categoryId);
-  if (search) params.set('search', search);
+  try {
+    const params = new URLSearchParams();
+    if (categoryId) params.set('categoryId', categoryId);
+    if (search) params.set('search', search);
 
-  const query = params.toString() ? `?${params.toString()}` : '';
-  const res = await fetch(`/api/support/help/articles${query}`, {
-    headers: getAuthHeaders(),
-  });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/support/help/articles${query}`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch help articles');
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+
+    return res.json();
+  } catch {
+    return [];
   }
-
-  return res.json();
 }
 
 export async function fetchHelpArticleBySlug(slug: string): Promise<HelpArticleItem> {
-  const res = await fetch(`/api/support/help/articles/${slug}`, {
+  const res = await fetch(`${API_BASE_URL}/api/support/help/articles/${slug}`, {
     headers: getAuthHeaders(),
   });
 
@@ -196,28 +206,33 @@ export async function fetchOwnerTicketQueue(filter?: {
   priority?: string;
   clientId?: string;
 }): Promise<TicketItem[]> {
-  const params = new URLSearchParams();
-  if (filter?.status) params.set('status', filter.status);
-  if (filter?.priority) params.set('priority', filter.priority);
-  if (filter?.clientId) params.set('clientId', filter.clientId);
+  try {
+    const params = new URLSearchParams();
+    if (filter?.status) params.set('status', filter.status);
+    if (filter?.priority) params.set('priority', filter.priority);
+    if (filter?.clientId) params.set('clientId', filter.clientId);
 
-  const query = params.toString() ? `?${params.toString()}` : '';
-  const res = await fetch(`/api/admin/support/tickets${query}`, {
-    headers: getAuthHeaders(),
-  });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets${query}`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch owner ticket queue');
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+
+    return res.json();
+  } catch {
+    return [];
   }
-
-  return res.json();
 }
 
 export async function triageTicket(
   ticketId: string,
   payload: { status?: string; priority?: string; assignedToId?: string },
 ): Promise<TicketItem> {
-  const res = await fetch(`/api/admin/support/tickets/${ticketId}/triage`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${ticketId}/triage`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -234,7 +249,7 @@ export async function sendOwnerReply(
   ticketId: string,
   content: string,
 ): Promise<TicketMessageItem> {
-  const res = await fetch(`/api/admin/support/tickets/${ticketId}/messages`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${ticketId}/messages`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ content }),
@@ -248,20 +263,25 @@ export async function sendOwnerReply(
 }
 
 export async function fetchAdminHelpArticles(categoryId?: string, search?: string): Promise<HelpArticleItem[]> {
-  const params = new URLSearchParams();
-  if (categoryId) params.set('categoryId', categoryId);
-  if (search) params.set('search', search);
+  try {
+    const params = new URLSearchParams();
+    if (categoryId) params.set('categoryId', categoryId);
+    if (search) params.set('search', search);
 
-  const query = params.toString() ? `?${params.toString()}` : '';
-  const res = await fetch(`/api/admin/support/help/articles${query}`, {
-    headers: getAuthHeaders(),
-  });
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/help/articles${query}`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch admin articles');
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+
+    return res.json();
+  } catch {
+    return [];
   }
-
-  return res.json();
 }
 
 export async function createAdminHelpArticle(payload: {
@@ -272,7 +292,7 @@ export async function createAdminHelpArticle(payload: {
   excerpt?: string;
   isPublished?: boolean;
 }): Promise<HelpArticleItem> {
-  const res = await fetch('/api/admin/support/help/articles', {
+  const res = await fetch(`${API_BASE_URL}/api/admin/support/help/articles`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -289,7 +309,7 @@ export async function updateAdminHelpArticle(
   id: string,
   payload: Partial<HelpArticleItem>,
 ): Promise<HelpArticleItem> {
-  const res = await fetch(`/api/admin/support/help/articles/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/support/help/articles/${id}`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
@@ -303,7 +323,7 @@ export async function updateAdminHelpArticle(
 }
 
 export async function deleteAdminHelpArticle(id: string): Promise<void> {
-  const res = await fetch(`/api/admin/support/help/articles/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/support/help/articles/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });

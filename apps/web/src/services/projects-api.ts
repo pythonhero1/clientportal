@@ -53,7 +53,8 @@ export function setActivePersona(key: string) {
 
 export function getAuthHeaders(): HeadersInit {
   const persona = getActivePersona();
-  return {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('portal_auth_token') : null;
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-mock-user-id': persona.id,
     'x-mock-role': persona.role,
@@ -61,6 +62,10 @@ export function getAuthHeaders(): HeadersInit {
     'x-mock-mfa': persona.hasMfa ? 'true' : 'false',
     'x-mock-billing-contact': persona.id === 'client_c' ? 'false' : 'true',
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 export async function fetchClientOverview() {
@@ -100,7 +105,7 @@ export async function fetchProjectWorkspace(projectId: string) {
 }
 
 export async function approveMilestone(projectId: string, milestoneId: string) {
-  const res = await fetch(`/api/projects/${projectId}/milestones/${milestoneId}/approve`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/milestones/${milestoneId}/approve`, {
     method: 'POST',
     headers: getAuthHeaders(),
   });
@@ -109,7 +114,7 @@ export async function approveMilestone(projectId: string, milestoneId: string) {
 }
 
 export async function fetchOnboarding(projectId: string) {
-  const res = await fetch(`/api/projects/${projectId}/onboarding`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/onboarding`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Onboarding fetch failed: ${res.status}`);
@@ -117,7 +122,7 @@ export async function fetchOnboarding(projectId: string) {
 }
 
 export async function fetchQuestionnaire(projectId: string) {
-  const res = await fetch(`/api/projects/${projectId}/onboarding/questionnaire`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/onboarding/questionnaire`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Questionnaire fetch failed: ${res.status}`);
@@ -125,7 +130,7 @@ export async function fetchQuestionnaire(projectId: string) {
 }
 
 export async function saveQuestionnaireDraft(projectId: string, responses: Record<string, any>) {
-  const res = await fetch(`/api/projects/${projectId}/onboarding/questionnaire/draft`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/onboarding/questionnaire/draft`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify({ responses }),
@@ -135,7 +140,7 @@ export async function saveQuestionnaireDraft(projectId: string, responses: Recor
 }
 
 export async function submitQuestionnaire(projectId: string, responses: Record<string, any>) {
-  const res = await fetch(`/api/projects/${projectId}/onboarding/questionnaire/submit`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/onboarding/questionnaire/submit`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ responses }),
@@ -145,7 +150,7 @@ export async function submitQuestionnaire(projectId: string, responses: Record<s
 }
 
 export async function confirmCredentialShared(projectId: string, data: { platformName: string; method: string; instructions?: string }) {
-  const res = await fetch(`/api/projects/${projectId}/onboarding/credentials/confirm-shared`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/onboarding/credentials/confirm-shared`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -156,7 +161,7 @@ export async function confirmCredentialShared(projectId: string, data: { platfor
 
 // Owner API Calls
 export async function fetchOwnerProjects() {
-  const res = await fetch('/api/admin/projects', {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error(`Owner projects fetch failed: ${res.status}`);
@@ -164,7 +169,7 @@ export async function fetchOwnerProjects() {
 }
 
 export async function createOwnerProject(data: { name: string; description?: string; clientId: string; initialWebsites?: any[] }) {
-  const res = await fetch('/api/admin/projects', {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -174,7 +179,7 @@ export async function createOwnerProject(data: { name: string; description?: str
 }
 
 export async function addOwnerWebsite(projectId: string, data: { name: string; url: string; environment?: string; status?: string }) {
-  const res = await fetch(`/api/admin/projects/${projectId}/websites`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects/${projectId}/websites`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -184,7 +189,7 @@ export async function addOwnerWebsite(projectId: string, data: { name: string; u
 }
 
 export async function addOwnerMilestone(projectId: string, data: { title: string; description?: string; orderIndex?: number; status?: string; dueDate?: string }) {
-  const res = await fetch(`/api/admin/projects/${projectId}/milestones`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects/${projectId}/milestones`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -194,7 +199,7 @@ export async function addOwnerMilestone(projectId: string, data: { title: string
 }
 
 export async function addOwnerDocument(projectId: string, data: { title: string; driveUrl: string; category?: string; sharedStatusNote?: string }) {
-  const res = await fetch(`/api/admin/projects/${projectId}/documents`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects/${projectId}/documents`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -204,7 +209,7 @@ export async function addOwnerDocument(projectId: string, data: { title: string;
 }
 
 export async function approveOwnerKickoff(projectId: string, notes?: string) {
-  const res = await fetch(`/api/admin/projects/${projectId}/kickoff/approve`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/projects/${projectId}/kickoff/approve`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ notes }),

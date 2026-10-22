@@ -57,10 +57,11 @@ async function bootstrap() {
   try {
     let clerkUserId = `clerk_owner_${Buffer.from(email).toString('hex').slice(0, 12)}`;
 
-    if (process.env.CLERK_SECRET_KEY) {
+    const clerkSecret = (process.env.CLERK_SECRET_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+    if (clerkSecret) {
       try {
         const { createClerkClient } = await import('@clerk/backend');
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+        const clerk = createClerkClient({ secretKey: clerkSecret });
         const users = await clerk.users.getUserList({ emailAddress: [email] });
         if (users.data && users.data.length > 0) {
           clerkUserId = users.data[0].id;

@@ -71,7 +71,7 @@ export async function fetchUnreadCount(): Promise<number> {
 }
 
 export async function markNotificationAsRead(id: string): Promise<NotificationItem> {
-  const res = await fetch(`/api/notifications/${id}/read`, {
+  const res = await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
   });
@@ -84,7 +84,7 @@ export async function markNotificationAsRead(id: string): Promise<NotificationIt
 }
 
 export async function markAllNotificationsAsRead(): Promise<{ count: number }> {
-  const res = await fetch('/api/notifications/mark-all-read', {
+  const res = await fetch(`${API_BASE_URL}/api/notifications/mark-all-read`, {
     method: 'POST',
     headers: getAuthHeaders(),
   });
@@ -97,16 +97,21 @@ export async function markAllNotificationsAsRead(): Promise<{ count: number }> {
 }
 
 export async function fetchPushPublicKey(): Promise<string | null> {
-  const res = await fetch('/api/notifications/push/public-key', {
-    headers: getAuthHeaders(),
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/notifications/push/public-key`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return null;
+    }
+
+    const data = await res.json();
+    return data.publicKey || null;
+  } catch {
     return null;
   }
-
-  const data = await res.json();
-  return data.publicKey || null;
 }
 
 export async function subscribePush(subscriptionPayload: {
@@ -114,7 +119,7 @@ export async function subscribePush(subscriptionPayload: {
   keys: { p256dh: string; auth: string };
   userAgent?: string;
 }): Promise<void> {
-  const res = await fetch('/api/notifications/push/subscribe', {
+  const res = await fetch(`${API_BASE_URL}/api/notifications/push/subscribe`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(subscriptionPayload),
@@ -126,7 +131,7 @@ export async function subscribePush(subscriptionPayload: {
 }
 
 export async function unsubscribePush(endpoint: string): Promise<void> {
-  const res = await fetch('/api/notifications/push/unsubscribe', {
+  const res = await fetch(`${API_BASE_URL}/api/notifications/push/unsubscribe`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ endpoint }),

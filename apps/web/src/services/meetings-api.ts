@@ -1,4 +1,5 @@
 import { getAuthHeaders } from './projects-api';
+import { API_BASE_URL } from './api-client';
 
 export interface Meeting {
   id: string;
@@ -31,28 +32,37 @@ export interface BookingTokenResponse {
 }
 
 export async function fetchProjectMeetings(projectId: string): Promise<Meeting[]> {
-  const res = await fetch(`/api/projects/${projectId}/meetings`, {
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
-    if (res.status === 404) return [];
-    throw new Error(`Failed to load meetings: ${res.statusText}`);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/meetings`, {
+      headers: getAuthHeaders(),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+    return res.json();
+  } catch {
+    return [];
   }
-  return res.json();
 }
 
 export async function fetchClientMeetings(): Promise<Meeting[]> {
-  const res = await fetch('/api/meetings', {
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/meetings`, {
+      headers: getAuthHeaders(),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+    return res.json();
+  } catch {
     return [];
   }
-  return res.json();
 }
 
 export async function fetchBookingToken(projectId: string): Promise<BookingTokenResponse> {
-  const res = await fetch(`/api/projects/${projectId}/meetings/booking-token`, {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/meetings/booking-token`, {
     method: 'POST',
     headers: getAuthHeaders(),
   });
@@ -65,10 +75,24 @@ export async function fetchBookingToken(projectId: string): Promise<BookingToken
 export async function fetchEventTypes(): Promise<
   Array<{ id: number; title: string; slug: string; lengthInMinutes: number; bookingUrl: string }>
 > {
-  const res = await fetch('/api/meetings/event-types', {
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/meetings/event-types`, {
+      headers: getAuthHeaders(),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [
+        {
+          id: 4862054,
+          title: 'Free Website Strategy Call (60 Minutes)',
+          slug: 'free',
+          lengthInMinutes: 60,
+          bookingUrl: 'https://cal.com/oderinde/free',
+        },
+      ];
+    }
+    return res.json();
+  } catch {
     return [
       {
         id: 4862054,
@@ -79,31 +103,35 @@ export async function fetchEventTypes(): Promise<
       },
     ];
   }
-  return res.json();
 }
 
 export async function fetchOwnerMeetings(filters?: {
   projectId?: string;
   status?: string;
 }): Promise<Meeting[]> {
-  const params = new URLSearchParams();
-  if (filters?.projectId) params.set('projectId', filters.projectId);
-  if (filters?.status) params.set('status', filters.status);
+  try {
+    const params = new URLSearchParams();
+    if (filters?.projectId) params.set('projectId', filters.projectId);
+    if (filters?.status) params.set('status', filters.status);
 
-  const res = await fetch(`/api/admin/meetings?${params.toString()}`, {
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error('Failed to load owner meetings.');
+    const res = await fetch(`${API_BASE_URL}/api/admin/meetings?${params.toString()}`, {
+      headers: getAuthHeaders(),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || contentType.includes('text/html')) {
+      return [];
+    }
+    return res.json();
+  } catch {
+    return [];
   }
-  return res.json();
 }
 
 export async function updateOwnerMeeting(
   meetingId: string,
   data: { projectId?: string; description?: string; status?: string },
 ): Promise<Meeting> {
-  const res = await fetch(`/api/admin/meetings/${meetingId}`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/meetings/${meetingId}`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),

@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
-import { API_BASE_URL } from '../../../services/api-client';
-
-declare global {
-  interface Window {
-    Clerk?: any;
-  }
-}
+import { loadClerk } from '../../../services/clerk-client';
 
 export const SignUpPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -24,52 +18,52 @@ export const SignUpPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (!fullName || !email || !password) {
+      if (!fullName.trim() || !email.trim() || !password) {
         setError('Please fill in all required fields.');
         setIsLoading(false);
         return;
       }
 
-      if (typeof window !== 'undefined' && window.Clerk && window.Clerk.client) {
-        try {
-          const names = fullName.trim().split(' ');
-          const firstName = names[0];
-          const lastName = names.slice(1).join(' ') || undefined;
-
-          await window.Clerk.client.signUp.create({
-            emailAddress: email,
-            password: password,
-            firstName,
-            lastName,
-          });
-
-          await window.Clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-          window.location.href = `/verify-email?email=${encodeURIComponent(email)}`;
-          return;
-        } catch (clerkErr: any) {
-          const msg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || 'Registration failed.';
-          setError(msg);
-          setIsLoading(false);
-          return;
-        }
+      let clerk: any = null;
+      try {
+        clerk = await loadClerk();
+      } catch (loadErr: any) {
+        console.error('Failed to load Clerk:', loadErr);
+        setError('Authentication service is currently loading. Please refresh and try again.');
+        setIsLoading(false);
+        return;
       }
 
-      // If invitation token exists, accept invitation after signup
-      if (invitationToken) {
-        const acceptRes = await fetch(`${API_BASE_URL}/api/invitations/accept`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: invitationToken }),
+      if (!clerk || !clerk.client) {
+        setError('Authentication service is not ready yet. Please wait a moment.');
+        setIsLoading(false);
+        return;
+      }
+
+      const names = fullName.trim().split(' ');
+      const firstName = names[0];
+      const lastName = names.slice(1).join(' ') || undefined;
+
+      try {
+        await clerk.client.signUp.create({
+          emailAddress: email.trim(),
+          password: password,
+          firstName,
+          lastName,
         });
 
-        if (acceptRes.ok) {
-          window.location.href = '/overview';
-          return;
-        }
+        await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        window.location.href = `/verify-email?email=${encodeURIComponent(email.trim())}`;
+        return;
+      } catch (clerkErr: any) {
+        const msg =
+          clerkErr.errors?.[0]?.longMessage ||
+          clerkErr.errors?.[0]?.message ||
+          'Registration failed.';
+        setError(msg);
+        setIsLoading(false);
+        return;
       }
-
-      // Uninvited public signup routes to pending approval
-      window.location.href = '/pending-approval';
     } catch {
       setError('Unable to register. Please check your network connection.');
     } finally {

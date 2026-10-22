@@ -9,9 +9,10 @@ export class ClerkAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers['authorization'];
+    const secretKey = (process.env.CLERK_SECRET_KEY || '').trim().replace(/^['"]|['"]$/g, '');
 
     // In testing or development simulation mode
-    if (process.env.NODE_ENV === 'test' || !process.env.CLERK_SECRET_KEY) {
+    if (process.env.NODE_ENV === 'test' || !secretKey) {
       const mockUserId = request.headers['x-mock-user-id'];
       if (mockUserId) {
         request.user = {
@@ -34,9 +35,9 @@ export class ClerkAuthGuard implements CanActivate {
     const token = authHeader.split(' ')[1];
 
     try {
-      if (process.env.CLERK_SECRET_KEY) {
+      if (secretKey) {
         const { createClerkClient } = await import('@clerk/backend');
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+        const clerk = createClerkClient({ secretKey });
         const verifiedToken = await clerk.authenticateRequest(request);
 
         if (!verifiedToken.isSignedIn) {
@@ -49,9 +50,35 @@ export class ClerkAuthGuard implements CanActivate {
         }
 
         if (process.env.DATABASE_URL) {
-          const user = await this.prisma.user.findUnique({
+          let user = await this.prisma.user.findUnique({
             where: { clerkUserId },
           });
+
+          // If user record is not yet linked to this clerkUserId, attempt linking by verified email:
+          if (!user) {
+            try {
+              const clerkUser = await clerk.users.getUser(clerkUserId);
+              const primaryEmail =
+                clerkUser.emailAddresses?.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ||
+                clerkUser.emailAddresses?.[0]?.emailAddress;
+
+              if (primaryEmail) {
+                const existingUser = await this.prisma.user.findUnique({
+                  where: { email: primaryEmail.toLowerCase() },
+                });
+
+                if (existingUser) {
+                  user = await this.prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: { clerkUserId },
+                  });
+                  console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
+                }
+              }
+            } catch (linkErr: any) {
+              console.warn('[ClerkAuthGuard] User lookup/linking by email failed:', linkErr.message);
+            }
+          }
 
           if (!user) {
             throw new UnauthorizedException('User record not found in portal database.');

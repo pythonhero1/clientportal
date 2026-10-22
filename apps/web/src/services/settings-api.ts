@@ -184,7 +184,7 @@ export async function fetchActiveSessions(): Promise<SessionData[]> {
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {
-  const res = await fetch(`/api/users/sessions/${sessionId}`, {
+  const res = await fetch(`${API_BASE_URL}/api/users/sessions/${sessionId}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });

@@ -4,12 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { MobileDrawer } from './components/MobileDrawer';
 import { getAuthToken } from '../services/api-client';
-
-declare global {
-  interface Window {
-    Clerk?: any;
-  }
-}
+import { loadClerk } from '../services/clerk-client';
 
 export interface AppShellProps {
   role?: 'Owner' | 'Client';
@@ -30,14 +25,17 @@ export const AppShell: React.FC<AppShellProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
       const token = getAuthToken();
-      if (window.Clerk && window.Clerk.isReady && !window.Clerk.user) {
-        navigate('/sign-in', { replace: true });
-        return;
-      }
-      if (!token && window.Clerk && window.Clerk.isReady && !window.Clerk.user) {
-        navigate('/sign-in', { replace: true });
-        return;
-      }
+      loadClerk()
+        .then((clerk) => {
+          if (clerk && clerk.loaded && !clerk.user && !token) {
+            navigate('/sign-in', { replace: true });
+          }
+        })
+        .catch(() => {
+          if (!token) {
+            navigate('/sign-in', { replace: true });
+          }
+        });
     }
   }, [location.pathname, navigate]);
 

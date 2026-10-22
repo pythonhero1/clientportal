@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
 import { setAuthToken, API_BASE_URL } from '../../../services/api-client';
-
-declare global {
-  interface Window {
-    Clerk?: any;
-  }
-}
+import { loadClerk } from '../../../services/clerk-client';
 
 export const SignInPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,92 +16,98 @@ export const SignInPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (!email || !password) {
+      if (!email.trim() || !password) {
         setError('Please enter both email and password.');
         setIsLoading(false);
         return;
       }
 
-      // 1. Authenticate with Clerk if available
-      if (typeof window !== 'undefined' && window.Clerk && window.Clerk.client) {
-        try {
-          const signInAttempt = await window.Clerk.client.signIn.create({
-            identifier: email,
-            password: password,
-          });
-
-          if (signInAttempt.status === 'complete') {
-            await window.Clerk.setActive({ session: signInAttempt.createdSessionId });
-            const token = await window.Clerk.session?.getToken();
-            setAuthToken(token);
-
-            // Verify account status with backend
-            try {
-              const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-              });
-              if (res.status === 403) {
-                const data = await res.json().catch(() => ({}));
-                if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
-                  window.location.href = '/pending-approval';
-                  return;
-                }
-                window.location.href = '/access-denied';
-                return;
-              }
-            } catch {
-              // Proceed if status check is non-blocking
-            }
-
-            window.location.href = '/overview';
-            return;
-          } else {
-            setError('Additional verification is required (MFA). Please check your authentication app or email.');
-            setIsLoading(false);
-            return;
-          }
-        } catch (clerkErr: any) {
-          const msg = clerkErr.errors?.[0]?.longMessage || clerkErr.errors?.[0]?.message || 'Invalid email or password.';
-          setError(msg);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // 2. If Clerk is not yet loaded, verify against backend
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (res.status === 401) {
-        setError('Invalid credentials. Please enter your authorized email and password.');
+      // Initialize Clerk SDK
+      let clerk: any = null;
+      try {
+        clerk = await loadClerk();
+      } catch (loadErr: any) {
+        console.error('Failed to load Clerk:', loadErr);
+        setError('Authentication service is currently loading or unreachable. Please refresh the page.');
         setIsLoading(false);
         return;
       }
 
-      if (res.status === 403) {
-        const data = await res.json().catch(() => ({}));
-        if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
-          window.location.href = '/pending-approval';
-          return;
-        }
-        window.location.href = '/access-denied';
+      if (!clerk || !clerk.client) {
+        setError('Authentication system is initializing. Please try again in a moment.');
+        setIsLoading(false);
         return;
       }
 
-      if (res.ok) {
+      // Authenticate strictly against Clerk
+      let signInAttempt: any = null;
+      try {
+        signInAttempt = await clerk.client.signIn.create({
+          identifier: email.trim(),
+          password: password,
+        });
+      } catch (clerkErr: any) {
+        const msg =
+          clerkErr.errors?.[0]?.longMessage ||
+          clerkErr.errors?.[0]?.message ||
+          'Invalid email address or password.';
+        setError(msg);
+        setIsLoading(false);
+        return;
+      }
+
+      if (signInAttempt && signInAttempt.status === 'complete') {
+        await clerk.setActive({ session: signInAttempt.createdSessionId });
+        const token = await clerk.session?.getToken();
+        if (token) {
+          setAuthToken(token);
+        }
+
+        // Verify account role and status with backend API
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+
+          if (res.status === 403) {
+            const data = await res.json().catch(() => ({}));
+            if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
+              window.location.href = '/pending-approval';
+              return;
+            }
+            window.location.href = '/access-denied';
+            return;
+          }
+
+          if (res.ok) {
+            const me = await res.json().catch(() => null);
+            if (me && me.role === 'Owner') {
+              window.location.href = '/owner/overview';
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('[SignIn] Backend /auth/me lookup error:', apiErr);
+        }
+
+        // Default redirect for client users
         window.location.href = '/overview';
         return;
+      } else if (signInAttempt && signInAttempt.status === 'needs_second_factor') {
+        setError('Two-factor verification (MFA) required. Please check your authenticator or email.');
+        setIsLoading(false);
+        return;
+      } else {
+        setError('Additional verification is required to complete sign in.');
+        setIsLoading(false);
+        return;
       }
-
-      setError('Invalid email or password. Please verify your credentials.');
-    } catch {
-      setError('Unable to authenticate. Please verify your email and password.');
+    } catch (err: any) {
+      console.error('Sign-in error:', err);
+      setError(err.message || 'Unable to sign in. Please verify your email and password.');
     } finally {
       setIsLoading(false);
     }

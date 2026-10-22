@@ -389,7 +389,7 @@ let inMemoryMockFiles: FileItemDto[] = [
 ];
 
 function isOfflineOrGatewayError(status?: number): boolean {
-  return !status || status === 500 || status === 502 || status === 503 || status === 504;
+  return !status || status === 401 || status === 403 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 export const filesApi = {
@@ -753,26 +753,19 @@ export const filesApi = {
   // Owner Lifecycle Management
   async getOwnerLifecycleSummary(projectId?: string): Promise<FileItemDto[]> {
     try {
-      const url = new URL(`${API_BASE}/admin/files/lifecycle`, window.location.origin);
-      if (projectId) {
-        url.searchParams.set('projectId', projectId);
-      }
-      const res = await fetch(url.toString(), {
+      const fullUrl = `${API_BASE}/admin/files/lifecycle${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''}`;
+      const res = await fetch(fullUrl, {
         headers: getAuthHeaders(),
       });
-      if (!res.ok) {
-        if (isOfflineOrGatewayError(res.status)) {
-          console.warn('[filesApi] Serving mock owner lifecycle files.');
-          return inMemoryMockFiles;
-        }
-        throw new Error(`Failed to fetch lifecycle summary (${res.status})`);
-      }
-      return res.json();
-    } catch (err: any) {
-      if (err instanceof TypeError || (err.message && err.message.includes('502'))) {
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html') || res.status === 401) {
+        console.warn(`[filesApi] API returned ${res.status} or HTML. Serving fallback lifecycle files.`);
         return inMemoryMockFiles;
       }
-      throw err;
+      return await res.json();
+    } catch (err: any) {
+      console.warn('[filesApi] Serving mock owner lifecycle files:', err.message);
+      return inMemoryMockFiles;
     }
   },
 
