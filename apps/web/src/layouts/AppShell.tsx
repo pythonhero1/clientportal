@@ -15,8 +15,8 @@ export interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({
   role = 'Client',
-  userName = 'Stephen Oderinde',
-  userEmail = 'stephenoderinde@gmail.com',
+  userName = '',
+  userEmail = '',
   children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -40,10 +40,10 @@ export const AppShell: React.FC<AppShellProps> = ({
           const email =
             clerk.user.primaryEmailAddress?.emailAddress ||
             clerk.user.emailAddresses?.[0]?.emailAddress ||
-            userEmail;
+            '';
           const name =
             clerk.user.fullName ||
-            (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : userName);
+            (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : '');
           setCurrentUser({ name, email });
         }
 
@@ -78,19 +78,28 @@ export const AppShell: React.FC<AppShellProps> = ({
               return null;
             })
             .then((me) => {
-              if (me?.role || me?.email) {
-                const isUserAdmin =
-                  me.role === 'Admin' ||
-                  me.role === 'Owner' ||
-                  me.email?.toLowerCase() === 'stephenoderinde@gmail.com' ||
-                  currentUser.email.toLowerCase() === 'stephenoderinde@gmail.com';
-                const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+              if (!me) return;
 
-                if (!isUserAdmin && isAdminRoute) {
-                  navigate('/access-denied', { replace: true });
-                } else if (isUserAdmin && !isAdminRoute) {
-                  navigate('/admin', { replace: true });
-                }
+              if (me.status === 'PENDING_APPROVAL') {
+                navigate('/pending-approval', { replace: true });
+                return;
+              }
+              if (me.status === 'SUSPENDED' || me.status === 'REJECTED') {
+                navigate('/access-denied', { replace: true });
+                return;
+              }
+
+              const verifiedEmail = (me.email || clerk?.user?.primaryEmailAddress?.emailAddress || '').toLowerCase().trim();
+              const isUserAdmin =
+                me.role === 'Admin' ||
+                me.role === 'Owner' ||
+                verifiedEmail === 'stephenoderinde@gmail.com';
+              const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+
+              if (!isUserAdmin && isAdminRoute) {
+                navigate('/access-denied', { replace: true });
+              } else if (isUserAdmin && !isAdminRoute) {
+                navigate('/admin', { replace: true });
               }
             })
             .catch(() => {});

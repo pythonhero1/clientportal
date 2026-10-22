@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -45,6 +45,15 @@ export class UsersController {
     return this.usersService.activateUser(userId, actor.id);
   }
 
+  @Post('users/:userId/suspend')
+  @HttpCode(HttpStatus.OK)
+  async suspendUser(
+    @Param('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.suspendUser(userId, actor.id);
+  }
+
   @Post('users/:userId/reject')
   @HttpCode(HttpStatus.OK)
   async rejectUser(
@@ -52,6 +61,15 @@ export class UsersController {
     @CurrentUser() actor: AuthenticatedUser,
   ) {
     return this.usersService.rejectUser(userId, actor.id);
+  }
+
+  @Delete('users/:userId')
+  @HttpCode(HttpStatus.OK)
+  async deleteUser(
+    @Param('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.deleteUser(userId, actor.id);
   }
 
   @Post('invitations')

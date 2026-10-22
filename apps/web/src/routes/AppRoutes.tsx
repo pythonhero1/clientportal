@@ -13,6 +13,7 @@ import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage'
 import { AccessDeniedPage } from '../features/auth/pages/AccessDeniedPage';
 import { getAuthToken } from '../services/api-client';
 import { loadClerk } from '../services/clerk-client';
+import { fetchAuthenticatedUser, isAdministrator } from '../services/auth-routing';
 
 // Client Portal Pages (Screens 06 - 18)
 import { OverviewPage } from '../features/dashboard/pages/OverviewPage';
@@ -45,17 +46,20 @@ import { NotFoundPage } from '../components/feedback/NotFoundPage';
 import { ForbiddenPage } from '../components/feedback/ForbiddenPage';
 
 const AdminGatewayRoute: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(() => {
-    const token = getAuthToken();
-    return token ? true : null;
-  });
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
     loadClerk()
-      .then((clerk) => {
+      .then(async (clerk) => {
         const token = getAuthToken();
         if (clerk?.user || token) {
-          setIsAuthenticated(true);
+          const { user } = await fetchAuthenticatedUser(token);
+          if (user && !isAdministrator(user)) {
+            // Logged-in user is a Client, cannot access Admin Dashboard
+            setIsAuthenticated(false);
+          } else {
+            setIsAuthenticated(Boolean(clerk?.user || token));
+          }
         } else {
           setIsAuthenticated(false);
         }

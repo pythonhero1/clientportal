@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { randomBytes } from 'crypto';
@@ -524,16 +524,167 @@ export class UsersService {
 
     await this.syncClerkUsers();
 
-    return this.prisma.user.findMany({
+    const clients = await this.prisma.user.findMany({
       where: { role: 'Client' },
       select: {
         id: true,
         name: true,
         email: true,
         status: true,
+        createdAt: true,
+        clerkUserId: true,
+        profile: {
+          select: {
+            companyName: true,
+            phone: true,
+            timezone: true,
+          },
+        },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
+
+    return clients.map((c) => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      status: c.status,
+      createdAt: c.createdAt.toISOString(),
+      dateJoined: c.createdAt.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      companyName: c.profile?.companyName || null,
+      phone: c.profile?.phone || null,
+      timezone: c.profile?.timezone || null,
+    }));
+  }
+
+  async suspendUser(userId: string, actorId?: string) {
+    if (!process.env.DATABASE_URL) {
+      return { id: userId, status: 'SUSPENDED' };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (user.role === 'Owner' || user.email.toLowerCase() === 'stephenoderinde@gmail.com') {
+      throw new BadRequestException('Cannot suspend the primary administrator account.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: 'SUSPENDED' },
+    });
+
+    // Revoke any active Clerk sessions for this user
+    const clerk = this.getClerkClient();
+    if (clerk && user.clerkUserId && !user.clerkUserId.startsWith('clerk_')) {
+      try {
+        const sessions = await clerk.sessions.getSessionList({ userId: user.clerkUserId });
+        const sessionList = (sessions as any)?.data || sessions;
+        if (Array.isArray(sessionList)) {
+          for (const s of sessionList) {
+            await clerk.sessions.revokeSession(s.id).catch(() => {});
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not revoke Clerk sessions for suspended user ${user.email}: ${err.message}`);
+      }
+    }
+
+    if (actorId) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'AccountSuspended',
+          targetType: 'User',
+          targetId: userId,
+          metadata: {
+            previousStatus: user.status,
+            newStatus: 'SUSPENDED',
+          },
+        },
+      });
+    }
+
+    return { id: updatedUser.id, status: updatedUser.status };
+  }
+
+  async deleteUser(userId: string, actorId?: string) {
+    if (!process.env.DATABASE_URL) {
+      return { success: true, deletedUserId: userId };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (user.role === 'Owner' || user.email.toLowerCase() === 'stephenoderinde@gmail.com') {
+      throw new BadRequestException('Cannot delete the primary administrator account.');
+    }
+
+    // 1. Delete from Clerk if registered in Clerk
+    const clerk = this.getClerkClient();
+    if (clerk && user.clerkUserId && !user.clerkUserId.startsWith('clerk_')) {
+      try {
+        await clerk.users.deleteUser(user.clerkUserId);
+        this.logger.log(`Successfully deleted Clerk account for ${user.email} (${user.clerkUserId})`);
+      } catch (clerkErr: any) {
+        this.logger.warn(`Clerk deletion warning for ${user.email}: ${clerkErr.message}`);
+      }
+    }
+
+    // 2. Safe cascade cleanup in Prisma
+    try {
+      await this.prisma.fileComment.deleteMany({ where: { authorId: userId } });
+      await this.prisma.messageAttachment.deleteMany({ where: { message: { senderId: userId } } });
+      await this.prisma.message.deleteMany({ where: { senderId: userId } });
+      await this.prisma.paymentRecord.deleteMany({ where: { invoice: { clientId: userId } } });
+      await this.prisma.invoiceItem.deleteMany({ where: { invoice: { clientId: userId } } });
+      await this.prisma.invoice.deleteMany({ where: { clientId: userId } });
+      await this.prisma.meeting.deleteMany({ where: { clientId: userId } });
+      await this.prisma.invitation.deleteMany({ where: { email: user.email } });
+      await this.prisma.notification.deleteMany({ where: { userId } });
+      await this.prisma.projectMembership.deleteMany({ where: { userId } });
+      await this.prisma.conversationMembership.deleteMany({ where: { userId } });
+      await this.prisma.userNotificationPreferences.deleteMany({ where: { userId } });
+      await this.prisma.pushSubscription.deleteMany({ where: { userId } });
+      await this.prisma.profile.deleteMany({ where: { userId } });
+
+      await this.prisma.user.delete({ where: { id: userId } });
+    } catch (dbErr: any) {
+      this.logger.error(`Database deletion error for user ${user.email}: ${dbErr.message}`, dbErr.stack);
+      throw new BadRequestException(`Failed to delete user database records: ${dbErr.message}`);
+    }
+
+    if (actorId) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'AccountDeleted',
+          targetType: 'User',
+          targetId: userId,
+          metadata: {
+            email: user.email,
+            name: user.name,
+            clerkUserId: user.clerkUserId,
+          },
+        },
+      });
+    }
+
+    return { success: true, deletedUserId: userId, email: user.email };
   }
 
   async rejectUser(userId: string, actorId?: string) {
