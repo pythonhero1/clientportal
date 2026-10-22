@@ -79,12 +79,30 @@ export class WsClerkAuthGuard implements CanActivate {
         }
 
         if (process.env.DATABASE_URL) {
-          const user = await this.prisma.user.findUnique({
-            where: { clerkUserId },
+          const handshakeEmail = (
+            (handshake.headers['x-user-email'] as string) ||
+            (handshake.auth?.email as string) ||
+            ''
+          ).trim().toLowerCase();
+
+          let user = await this.prisma.user.findFirst({
+            where: {
+              OR: [
+                { clerkUserId },
+                ...(handshakeEmail ? [{ email: handshakeEmail }] : []),
+              ],
+            },
           });
 
           if (!user || user.status !== 'ACTIVE') {
             throw new WsException('User account inactive or not found.');
+          }
+
+          if (user.clerkUserId !== clerkUserId) {
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: { clerkUserId },
+            }).catch(() => {});
           }
 
           client.data.user = {

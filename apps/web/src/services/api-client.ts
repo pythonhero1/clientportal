@@ -70,6 +70,24 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.Clerk?.user) {
+      const email =
+        win.Clerk.user.primaryEmailAddress?.emailAddress ||
+        win.Clerk.user.emailAddresses?.[0]?.emailAddress;
+      if (email && !headers.has('x-user-email')) {
+        headers.set('x-user-email', email);
+      }
+      const name =
+        win.Clerk.user.fullName ||
+        (win.Clerk.user.firstName ? `${win.Clerk.user.firstName} ${win.Clerk.user.lastName || ''}`.trim() : null);
+      if (name && !headers.has('x-user-name')) {
+        headers.set('x-user-name', name);
+      }
+    }
+  }
+
   // Attach mock headers ONLY if unauthenticated in local development
   if (!token && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     const activePersonaKey = localStorage.getItem('portal_dev_user') || 'owner';

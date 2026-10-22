@@ -100,7 +100,14 @@ describe('NotificationsService', () => {
       message: 'File moved to recovery',
     });
 
-    expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({ where: { role: 'Owner' } });
+    expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { role: 'Owner' },
+          { email: 'stephenoderinde@gmail.com' },
+        ],
+      },
+    });
     expect(mockPrisma.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'usr_owner_stephen',

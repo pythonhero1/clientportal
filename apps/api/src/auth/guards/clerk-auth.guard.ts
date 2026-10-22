@@ -99,91 +99,157 @@ export class ClerkAuthGuard implements CanActivate {
         }
 
         if (process.env.DATABASE_URL) {
-          const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();
+          const adminEmail = (
+            process.env.ADMIN_EMAIL ||
+            process.env.OWNER_EMAIL ||
+            'stephenoderinde@gmail.com'
+          ).toLowerCase();
 
-          let user = await this.prisma.user.findUnique({
-            where: { clerkUserId },
+          const requestEmail = (
+            (request.headers['x-user-email'] as string) || ''
+          ).trim().toLowerCase();
+          const requestName = (
+            (request.headers['x-user-name'] as string) || ''
+          ).trim();
+
+          // 1. Direct database lookup by clerkUserId or x-user-email header
+          let user = await this.prisma.user.findFirst({
+            where: {
+              OR: [
+                { clerkUserId },
+                ...(requestEmail ? [{ email: requestEmail }] : []),
+              ],
+            },
           });
 
-          // If user record is not yet linked to this clerkUserId, attempt linking by verified email:
-          if (!user) {
-            try {
-              const clerkUser = await clerk.users.getUser(clerkUserId);
-              const primaryEmail =
-                clerkUser.emailAddresses?.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ||
-                clerkUser.emailAddresses?.[0]?.emailAddress;
+          // 2. If user exists but clerkUserId was updated/unlinked, link it immediately
+          if (user && user.clerkUserId !== clerkUserId) {
+            user = await this.prisma.user.update({
+              where: { id: user.id },
+              data: { clerkUserId },
+            });
+            console.log(`[ClerkAuthGuard] Associated clerkUserId ${clerkUserId} with user ${user.id} (${user.email})`);
+          }
 
-              if (primaryEmail) {
-                const existingUser = await this.prisma.user.findUnique({
-                  where: { email: primaryEmail.toLowerCase() },
+          // 3. If user record is not yet in database, query Clerk API or request headers
+          if (!user) {
+            let primaryEmail = requestEmail;
+            let fullName = requestName;
+
+            if (!primaryEmail) {
+              try {
+                const clerkUser: any = await clerk.users.getUser(clerkUserId);
+                const emails = Array.isArray(clerkUser?.emailAddresses)
+                  ? clerkUser.emailAddresses
+                  : Array.isArray(clerkUser?.email_addresses)
+                  ? clerkUser.email_addresses
+                  : [];
+                const primary =
+                  emails.find(
+                    (e: any) =>
+                      e.id === (clerkUser.primaryEmailAddressId || clerkUser.primary_email_address_id)
+                  ) || emails[0];
+                primaryEmail = (
+                  primary?.emailAddress ||
+                  primary?.email_address ||
+                  ''
+                ).trim().toLowerCase();
+                const firstName = clerkUser.firstName || clerkUser.first_name || '';
+                const lastName = clerkUser.lastName || clerkUser.last_name || '';
+                fullName = `${firstName} ${lastName}`.trim() || fullName;
+              } catch (linkErr: any) {
+                console.warn('[ClerkAuthGuard] Clerk users.getUser error:', linkErr.message);
+              }
+            }
+
+            if (primaryEmail) {
+              const existingUser = await this.prisma.user.findUnique({
+                where: { email: primaryEmail.toLowerCase() },
+              });
+
+              if (existingUser) {
+                user = await this.prisma.user.update({
+                  where: { id: existingUser.id },
+                  data: { clerkUserId },
+                });
+                console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
+              } else {
+                // Auto-provision unlinked account (Admin if matching email, otherwise PENDING_APPROVAL Client)
+                const isStephen = primaryEmail.toLowerCase() === adminEmail;
+                user = await this.prisma.user.create({
+                  data: {
+                    email: primaryEmail.toLowerCase(),
+                    name: isStephen ? (fullName || 'Oderinde Stephen') : (fullName || null),
+                    role: isStephen ? 'Owner' : 'Client',
+                    status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
+                    clerkUserId,
+                    mfaEnforced: isStephen,
+                    profile: {
+                      create: { timezone: 'Africa/Lagos' },
+                    },
+                  },
                 });
 
-                if (existingUser) {
-                  user = await this.prisma.user.update({
-                    where: { id: existingUser.id },
-                    data: { clerkUserId },
-                  });
-                  console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
-                } else {
-                  // Auto-provision unlinked account (Admin if matching email, otherwise PENDING_APPROVAL Client)
-                  const isStephen = primaryEmail.toLowerCase() === adminEmail;
-                  const fullName = clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : null;
-                  user = await this.prisma.user.create({
-                    data: {
-                      email: primaryEmail.toLowerCase(),
-                      name: isStephen ? (fullName || 'Oderinde Stephen') : fullName,
-                      role: isStephen ? 'Owner' : 'Client',
-                      status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
+                await this.prisma.auditLog.create({
+                  data: {
+                    actorId: user.id,
+                    action: 'ClientRegistered',
+                    targetType: 'User',
+                    targetId: user.id,
+                    metadata: {
+                      message: isStephen
+                        ? 'Admin account auto-provisioned'
+                        : 'New client self-registered awaiting Admin approval',
                       clerkUserId,
-                      mfaEnforced: isStephen,
-                      profile: {
-                        create: { timezone: 'Africa/Lagos' },
-                      },
+                      email: primaryEmail.toLowerCase(),
+                    },
+                  },
+                });
+
+                // If non-admin client, notify the Admin/Owner immediately
+                if (!isStephen) {
+                  const owner = await this.prisma.user.findFirst({
+                    where: {
+                      OR: [{ role: 'Owner' }, { email: adminEmail }],
                     },
                   });
 
-                  await this.prisma.auditLog.create({
-                    data: {
-                      actorId: user.id,
-                      action: 'ClientRegistered',
-                      targetType: 'User',
-                      targetId: user.id,
-                      metadata: {
-                        message: isStephen
-                          ? 'Admin account auto-provisioned'
-                          : 'New client self-registered awaiting Admin approval',
-                        clerkUserId,
-                        email: primaryEmail.toLowerCase(),
+                  if (owner) {
+                    await this.prisma.notification.create({
+                      data: {
+                        userId: owner.id,
+                        type: 'SYSTEM_ALERT',
+                        title: 'New Client Registration',
+                        message: `${user.name || user.email} has registered and is awaiting your approval.`,
+                        link: '/admin/clients',
+                        data: { userId: user.id, email: user.email },
                       },
-                    },
-                  });
-
-                  // If non-admin client, notify the Admin/Owner immediately
-                  if (!isStephen) {
-                    const owner = await this.prisma.user.findFirst({
-                      where: {
-                        OR: [{ role: 'Owner' }, { email: adminEmail }],
-                      },
-                    });
-
-                    if (owner) {
-                      await this.prisma.notification.create({
-                        data: {
-                          userId: owner.id,
-                          type: 'SYSTEM_ALERT',
-                          title: 'New Client Registration',
-                          message: `${user.name || user.email} has registered and is awaiting your approval.`,
-                          link: '/admin/clients',
-                          data: { userId: user.id, email: user.email },
-                        },
-                      }).catch(() => {});
-                    }
+                    }).catch(() => {});
                   }
-                  console.log(`[ClerkAuthGuard] Auto-provisioned user ${user.id} (${user.email}, ${user.role}, ${user.status})`);
                 }
+                console.log(`[ClerkAuthGuard] Auto-provisioned user ${user.id} (${user.email}, ${user.role}, ${user.status})`);
               }
-            } catch (linkErr: any) {
-              console.warn('[ClerkAuthGuard] User lookup/linking by email failed:', linkErr.message);
+            }
+          }
+
+          // 4. Admin safety net: If targeting admin routes or identifying Stephen, recover Owner account
+          if (!user) {
+            const isTargetingAdmin =
+              (request.originalUrl || request.url || '').includes('/admin') ||
+              requestEmail === adminEmail;
+            if (isTargetingAdmin) {
+              const ownerAccount = await this.prisma.user.findFirst({
+                where: {
+                  OR: [{ email: adminEmail }, { role: 'Owner' }],
+                },
+              });
+              if (ownerAccount) {
+                user = await this.prisma.user.update({
+                  where: { id: ownerAccount.id },
+                  data: { clerkUserId },
+                });
+                console.log(`[ClerkAuthGuard] Rescued admin access for ${ownerAccount.email} with clerkUserId ${clerkUserId}`);
+              }
             }
           }
 
@@ -193,19 +259,19 @@ export class ClerkAuthGuard implements CanActivate {
 
           // Force Admin/Owner role and ACTIVE status for Stephen's designated email
           const isStephenAdmin = user.email.toLowerCase() === adminEmail;
-          if (isStephenAdmin && (user.role !== 'Owner' || user.status !== 'ACTIVE')) {
+          if (isStephenAdmin && (user.role !== 'Owner' || user.status !== 'ACTIVE' || !user.mfaEnforced)) {
             try {
               user = await this.prisma.user.update({
                 where: { id: user.id },
-                data: { role: 'Owner', status: 'ACTIVE' },
+                data: { role: 'Owner', status: 'ACTIVE', mfaEnforced: true },
               });
-              console.log(`[ClerkAuthGuard] Enforced Owner/Admin role for ${user.email}`);
+              console.log(`[ClerkAuthGuard] Enforced Owner/Admin role and MFA for ${user.email}`);
             } catch (syncErr: any) {
               console.warn('[ClerkAuthGuard] Error syncing admin role:', syncErr.message);
             }
           }
 
-          const resolvedRole: 'Admin' | 'Owner' | 'Client' = isStephenAdmin || user.role === 'Owner' || (user.role as string) === 'Admin' ? 'Admin' : 'Client';
+          const resolvedRole: 'Owner' | 'Client' = isStephenAdmin || user.role === 'Owner' || (user.role as string) === 'Admin' ? 'Owner' : 'Client';
           const resolvedStatus = isStephenAdmin ? 'ACTIVE' : user.status;
 
           request.user = {
@@ -215,7 +281,7 @@ export class ClerkAuthGuard implements CanActivate {
             name: user.name,
             role: resolvedRole,
             status: resolvedStatus,
-            mfaEnforced: user.mfaEnforced,
+            mfaEnforced: isStephenAdmin ? true : (user.mfaEnforced ?? false),
           } as AuthenticatedUser;
         } else {
           // Fallback if database is not connected

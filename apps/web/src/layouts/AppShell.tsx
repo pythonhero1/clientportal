@@ -55,11 +55,19 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         const token = getAuthToken();
         if (token && typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          const authHeaders: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          };
+          if (clerk?.user) {
+            const email = clerk.user.primaryEmailAddress?.emailAddress || clerk.user.emailAddresses?.[0]?.emailAddress;
+            if (email) authHeaders['x-user-email'] = email;
+            const name = clerk.user.fullName;
+            if (name) authHeaders['x-user-name'] = name;
+          }
+
           fetch(`${API_BASE_URL}/api/auth/me`, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
+            headers: authHeaders,
           })
             .then((res) => {
               if (res.status === 403) {

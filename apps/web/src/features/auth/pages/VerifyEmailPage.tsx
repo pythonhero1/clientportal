@@ -45,6 +45,9 @@ export const VerifyEmailPage: React.FC = () => {
     setIsLoading(true);
 
     try {
+      let verifiedClerkUserId: string | undefined;
+      let verifiedName: string | undefined;
+
       try {
         const clerk = await loadClerk();
         if (clerk?.client?.signUp) {
@@ -53,6 +56,8 @@ export const VerifyEmailPage: React.FC = () => {
             await clerk.setActive({ session: completeSignUp.createdSessionId });
             const token = await clerk.session?.getToken();
             if (token) setAuthToken(token);
+            verifiedClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
+            verifiedName = clerk.user?.fullName;
           }
         }
       } catch (clerkErr: any) {
@@ -61,11 +66,19 @@ export const VerifyEmailPage: React.FC = () => {
 
       // Notify backend to ensure user row exists and owner is notified
       if (email && email !== 'your email address') {
-        await fetch(`${API_BASE_URL}/api/auth/register-client`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim() }),
-        }).catch(() => {});
+        try {
+          await fetch(`${API_BASE_URL}/api/auth/register-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim(),
+              clerkUserId: verifiedClerkUserId,
+              name: verifiedName,
+            }),
+          });
+        } catch (regErr) {
+          console.warn('[VerifyEmailPage] register-client notify error:', regErr);
+        }
       }
 
       window.location.href = '/pending-approval';

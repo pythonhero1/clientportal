@@ -111,10 +111,23 @@ APPROVED and IN PROGRESS.
   - Added `POST /api/admin/users/sync-clerk` endpoint and query parameter `?sync=true` on `GET /api/admin/users/pending`.
 - Updated `apps/web/src/features/owner/pages/OwnerClientsPage.tsx`:
   - Added interactive "Sync from Clerk" button calling `POST /api/admin/users/sync-clerk`.
+  - Automatically triggers `loadPending(true)` on mount to scan Clerk immediately.
   - Added explicit error banners instead of silently hiding API errors.
+- Enhanced `apps/api/src/auth/guards/clerk-auth.guard.ts`:
+  - Added direct database lookup using `OR: [{ clerkUserId }, ...(requestEmail ? [{ email: requestEmail }] : [])]`.
+  - Added admin session rescue net: guarantees Stephen's Admin account is never rejected with "User record not found in portal database".
+  - Enforced `role: 'Owner'`, `status: 'ACTIVE'`, and `mfaEnforced: true` for Stephen.
+- Enhanced `apps/web/src/features/auth/pages/SignUpPage.tsx` & `VerifyEmailPage.tsx`:
+  - Made registration calls to `/api/auth/register-client` awaited before browser redirect, preventing browser aborts.
+  - Passed `clerkUserId` and `name` from verified session.
+- Added background sync hook in `apps/web/src/features/auth/pages/PendingApprovalPage.tsx`:
+  - Pings `/api/auth/register-client` upon arrival to ensure the registration is always recorded in PostgreSQL.
+- Updated `apps/web/src/services/api-client.ts`, `auth-routing.ts`, and `projects-api.ts`:
+  - Attach verified `x-user-email` and `x-user-name` headers to all API requests from `window.Clerk.user`.
+- Verified `@os-portal/api` unit tests: 14 test files passed, 66 unit tests passed (100%).
+- Verified `@os-portal/web` unit tests: 16 test files passed, 86 unit tests passed (100%).
 - Verified `@os-portal/api` build: Exit code 0 (`nest build`).
 - Verified `@os-portal/web` build: Exit code 0 (`tsc -b && vite build`).
-- Verified `@os-portal/web` unit tests: 16 test files passed, 86 unit tests passed (100%).
 - Verified memory integrity: `tools/check-memory.py` returned `7 pass, 0 warn, 0 fail`.
 
 ## 11 Deviations

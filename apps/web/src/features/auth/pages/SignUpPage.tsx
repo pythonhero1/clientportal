@@ -81,15 +81,19 @@ export const SignUpPage: React.FC = () => {
         });
 
         // Notify backend to create pending client and dispatch admin notification immediately
-        fetch(`${API_BASE_URL}/api/auth/register-client`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            name: fullName.trim(),
-            clerkUserId: signUpResult?.createdUserId || undefined,
-          }),
-        }).catch((err) => console.warn('[SignUpPage] register-client notify error:', err));
+        try {
+          await fetch(`${API_BASE_URL}/api/auth/register-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim(),
+              name: fullName.trim(),
+              clerkUserId: signUpResult?.createdUserId || undefined,
+            }),
+          });
+        } catch (err) {
+          console.warn('[SignUpPage] register-client notify error:', err);
+        }
 
         await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
         window.location.href = `/verify-email?email=${encodeURIComponent(email.trim())}`;

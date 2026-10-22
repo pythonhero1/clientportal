@@ -23,6 +23,24 @@ export async function fetchAuthenticatedUser(token?: string | null): Promise<{
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   };
 
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.Clerk?.user) {
+      const email =
+        win.Clerk.user.primaryEmailAddress?.emailAddress ||
+        win.Clerk.user.emailAddresses?.[0]?.emailAddress;
+      if (email) {
+        headers['x-user-email'] = email;
+      }
+      const name =
+        win.Clerk.user.fullName ||
+        (win.Clerk.user.firstName ? `${win.Clerk.user.firstName} ${win.Clerk.user.lastName || ''}`.trim() : null);
+      if (name) {
+        headers['x-user-name'] = name;
+      }
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE_URL}/api/auth/me`, { headers });
     if (res.status === 403) {

@@ -68,7 +68,7 @@ export const OwnerClientsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadPending();
+    loadPending(true);
   }, []);
 
   const handleActivate = async (userId: string, email: string) => {

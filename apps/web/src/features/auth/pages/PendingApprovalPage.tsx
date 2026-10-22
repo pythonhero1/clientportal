@@ -1,7 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
+import { API_BASE_URL } from '../../../services/api-client';
+import { loadClerk } from '../../../services/clerk-client';
 
 export const PendingApprovalPage: React.FC = () => {
+  useEffect(() => {
+    loadClerk().then(async (clerk) => {
+      if (clerk?.user) {
+        const email =
+          clerk.user.primaryEmailAddress?.emailAddress ||
+          clerk.user.emailAddresses?.[0]?.emailAddress;
+        if (email) {
+          fetch(`${API_BASE_URL}/api/auth/register-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              name: clerk.user.fullName || undefined,
+              clerkUserId: clerk.user.id || undefined,
+            }),
+          }).catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <AuthLayout
       tag="ACCESS STATUS"

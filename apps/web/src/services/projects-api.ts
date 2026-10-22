@@ -76,13 +76,32 @@ export async function getFreshAuthHeaders(): Promise<HeadersInit> {
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-  } else if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    const persona = getActivePersona();
-    headers['x-mock-user-id'] = persona.id;
-    headers['x-mock-role'] = persona.role;
-    headers['x-mock-status'] = 'ACTIVE';
-    headers['x-mock-mfa'] = persona.hasMfa ? 'true' : 'false';
-    headers['x-mock-billing-contact'] = persona.id === 'client_c' ? 'false' : 'true';
+  }
+
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.Clerk?.user) {
+      const email =
+        win.Clerk.user.primaryEmailAddress?.emailAddress ||
+        win.Clerk.user.emailAddresses?.[0]?.emailAddress;
+      if (email) {
+        headers['x-user-email'] = email;
+      }
+      const name =
+        win.Clerk.user.fullName ||
+        (win.Clerk.user.firstName ? `${win.Clerk.user.firstName} ${win.Clerk.user.lastName || ''}`.trim() : null);
+      if (name) {
+        headers['x-user-name'] = name;
+      }
+    }
+    if (window.location.hostname === 'localhost' && !token) {
+      const persona = getActivePersona();
+      headers['x-mock-user-id'] = persona.id;
+      headers['x-mock-role'] = persona.role;
+      headers['x-mock-status'] = 'ACTIVE';
+      headers['x-mock-mfa'] = persona.hasMfa ? 'true' : 'false';
+      headers['x-mock-billing-contact'] = persona.id === 'client_c' ? 'false' : 'true';
+    }
   }
   return headers;
 }
