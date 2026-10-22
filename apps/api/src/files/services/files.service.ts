@@ -97,7 +97,7 @@ export class FilesService {
         throw new NotFoundException('File not found.');
       }
       const mockList = this.getMockFiles(projectId, user);
-      const found = mockList.find((f) => f.id === fileId);
+      const found = mockList.find((f: any) => f.id === fileId);
       if (found) return found;
       return {
         id: fileId,
@@ -168,7 +168,7 @@ export class FilesService {
       if (err instanceof NotFoundException) throw err;
       this.logger.warn(`Failed to query database for file ${fileId}: ${err.message}. Returning fallback.`);
       const mockList = this.getMockFiles(projectId, user);
-      const found = mockList.find((f) => f.id === fileId);
+      const found = mockList.find((f: any) => f.id === fileId);
       if (found) return found;
       throw new NotFoundException('File not found.');
     }

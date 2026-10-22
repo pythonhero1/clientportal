@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
+import { setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
+import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
 
 export const SignUpPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -10,7 +12,33 @@ export const SignUpPage: React.FC = () => {
     return new URLSearchParams(window.location.search).get('token') || '';
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if an active authenticated Clerk session already exists
+  useEffect(() => {
+    let isMounted = true;
+    loadClerk()
+      .then(async (clerk) => {
+        if (!isMounted || !clerk || !clerk.user || !clerk.session) return;
+        setIsCheckingSession(true);
+        const token = await clerk.session.getToken();
+        if (token) {
+          setAuthToken(token);
+        }
+        const redirectUrl = await determineAuthenticatedRedirect(token);
+        if (isMounted) {
+          window.location.href = redirectUrl;
+        }
+      })
+      .catch((err) => {
+        console.warn('[SignUpPage] Session check error:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +98,29 @@ export const SignUpPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingSession) {
+    return (
+      <AuthLayout
+        tag="AUTHENTICATION"
+        title="Redirecting to your workspace"
+        subtitle="Active session detected. Please wait a moment..."
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--primary)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout

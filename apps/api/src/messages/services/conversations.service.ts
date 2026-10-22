@@ -84,7 +84,7 @@ export class ConversationsService {
 
   async getConversationById(id: string, user: AuthenticatedUser) {
     if (!process.env.DATABASE_URL) {
-      const mock = this.getMockConversations(user).find((c) => c.id === id);
+      const mock = this.getMockConversations(user).find((c: any) => c.id === id);
       if (!mock) throw new NotFoundException('Conversation not found.');
       return mock;
     }

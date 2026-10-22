@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { MobileDrawer } from './components/MobileDrawer';
-import { getAuthToken } from '../services/api-client';
+import { getAuthToken, API_BASE_URL } from '../services/api-client';
 import { loadClerk } from '../services/clerk-client';
 
 export interface AppShellProps {
@@ -42,6 +42,34 @@ export const AppShell: React.FC<AppShellProps> = ({
             clerk.user.fullName ||
             (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : userName);
           setCurrentUser({ name, email });
+        }
+
+        const token = getAuthToken();
+        if (token && typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          })
+            .then((res) => {
+              if (res.status === 403) {
+                navigate('/pending-approval', { replace: true });
+                return null;
+              }
+              if (res.ok) return res.json();
+              return null;
+            })
+            .then((me) => {
+              if (me?.role) {
+                if (me.role === 'Client' && location.pathname.startsWith('/owner')) {
+                  navigate('/access-denied', { replace: true });
+                } else if (me.role === 'Owner' && !location.pathname.startsWith('/owner')) {
+                  navigate('/owner', { replace: true });
+                }
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {

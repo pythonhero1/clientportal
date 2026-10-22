@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
-import { setAuthToken, API_BASE_URL } from '../../../services/api-client';
+import { setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
+import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
 
 export const SignInPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Multi-Factor Authentication states
@@ -16,6 +18,31 @@ export const SignInPage: React.FC = () => {
   const [mfaStrategy, setMfaStrategy] = useState('totp');
   const [mfaNotice, setMfaNotice] = useState('');
 
+  // Check if an active authenticated Clerk session already exists
+  useEffect(() => {
+    let isMounted = true;
+    loadClerk()
+      .then(async (clerk) => {
+        if (!isMounted || !clerk || !clerk.user || !clerk.session) return;
+        setIsCheckingSession(true);
+        const token = await clerk.session.getToken();
+        if (token) {
+          setAuthToken(token);
+        }
+        const redirectUrl = await determineAuthenticatedRedirect(token);
+        if (isMounted) {
+          window.location.href = redirectUrl;
+        }
+      })
+      .catch((err) => {
+        console.warn('[SignInPage] Session check error:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleCompleteSignIn = async (clerk: any, attempt: any) => {
     await clerk.setActive({ session: attempt.createdSessionId });
     const token = await clerk.session?.getToken();
@@ -23,38 +50,8 @@ export const SignInPage: React.FC = () => {
       setAuthToken(token);
     }
 
-    // Verify account role and status with backend API
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (res.status === 403) {
-        const data = await res.json().catch(() => ({}));
-        if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
-          window.location.href = '/pending-approval';
-          return;
-        }
-        window.location.href = '/access-denied';
-        return;
-      }
-
-      if (res.ok) {
-        const me = await res.json().catch(() => null);
-        if (me && me.role === 'Owner') {
-          window.location.href = '/owner/overview';
-          return;
-        }
-      }
-    } catch (apiErr) {
-      console.warn('[SignIn] Backend /auth/me lookup error:', apiErr);
-    }
-
-    // Default redirect for client users
-    window.location.href = '/overview';
+    const redirectUrl = await determineAuthenticatedRedirect(token);
+    window.location.href = redirectUrl;
   };
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
@@ -189,6 +186,29 @@ export const SignInPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingSession) {
+    return (
+      <AuthLayout
+        tag="AUTHENTICATION"
+        title="Redirecting to your workspace"
+        subtitle="Active session detected. Please wait a moment..."
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--primary)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout

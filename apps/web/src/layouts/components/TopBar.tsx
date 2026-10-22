@@ -106,7 +106,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Notifications Bell */}
         <Link
-          to="/notifications"
+          to={role === 'Owner' ? '/owner/notifications' : '/notifications'}
           className={cn(
             'relative p-2 rounded-lg text-[var(--muted-text)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)] transition-colors',
             'focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]'

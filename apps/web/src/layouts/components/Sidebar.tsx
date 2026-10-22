@@ -18,7 +18,6 @@ import {
   FileCheck2,
   CreditCard,
   LifeBuoy,
-  ArrowLeftRight,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotifications } from '../../features/notifications/hooks/useNotifications';
@@ -61,7 +60,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/owner/support', label: 'Support Queue', icon: LifeBuoy },
     { to: '/owner/meetings', label: 'Meetings & Schedule', icon: Calendar },
     { to: '/owner/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
-    { to: '/overview', label: 'Switch to Client View', icon: ArrowLeftRight },
   ];
 
   const navItems = role === 'Owner' ? ownerNav : clientNav;
@@ -112,18 +110,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
         ))}
       </nav>
-
-      {/* Role Switcher Quick Pill (for Owner in development) */}
-      {!compact && role === 'Client' && (
-        <div className="pt-3 border-t border-[var(--border)] mt-auto">
-          <NavItem
-            to="/owner"
-            label="Switch to Owner View"
-            icon={ArrowLeftRight}
-            onClick={onItemClick}
-          />
-        </div>
-      )}
     </aside>
   );
 };
