@@ -59,11 +59,39 @@ export const VerifyEmailPage: React.FC = () => {
       }
 
       const completeSignUp = await clerk.client.signUp.attemptEmailAddressVerification({ code: code.trim() });
-      if (completeSignUp?.status === 'complete' && completeSignUp.createdSessionId) {
-        await clerk.setActive({ session: completeSignUp.createdSessionId });
+      let finalSignUp = completeSignUp;
+
+      const emailVerif = finalSignUp.verifications?.emailAddress;
+      const unverified = finalSignUp.unverifiedFields || [];
+      if (unverified.includes('email_address') || (emailVerif && emailVerif.status !== 'verified')) {
+        const verifyError =
+          emailVerif?.error?.longMessage ||
+          emailVerif?.error?.message ||
+          'The verification code is incorrect or expired. Please check your email and try again.';
+        setError(verifyError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (finalSignUp.status === 'missing_requirements') {
+        const missing = finalSignUp.missingFields || [];
+        if (missing.length > 0) {
+          const updatePayload: any = {};
+          if (missing.includes('username')) {
+            const cleanUser = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+            updatePayload.username = cleanUser.length >= 4 ? cleanUser : `${cleanUser}_${Date.now().toString().slice(-4)}`;
+          }
+          try {
+            finalSignUp = await clerk.client.signUp.update(updatePayload);
+          } catch {}
+        }
+      }
+
+      if (finalSignUp?.status === 'complete' && finalSignUp.createdSessionId) {
+        await clerk.setActive({ session: finalSignUp.createdSessionId });
         const token = await clerk.session?.getToken();
         if (token) setAuthToken(token);
-        const verifiedClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
+        const verifiedClerkUserId = finalSignUp.createdUserId || clerk.user?.id;
         const verifiedName = clerk.user?.fullName;
 
         // Synchronously register in backend database
@@ -87,7 +115,11 @@ export const VerifyEmailPage: React.FC = () => {
         window.location.href = redirectUrl;
         return;
       } else {
-        setError(`Verification status: ${completeSignUp?.status || 'incomplete'}. Please check your code.`);
+        const details = [
+          ...(finalSignUp.missingFields ? [`Missing: ${finalSignUp.missingFields.join(', ')}`] : []),
+          ...(finalSignUp.unverifiedFields ? [`Unverified: ${finalSignUp.unverifiedFields.join(', ')}`] : []),
+        ].join('; ');
+        setError(details || 'Verification could not be completed. Please check your code or click Resend.');
       }
     } catch (clerkErr: any) {
       const msg =

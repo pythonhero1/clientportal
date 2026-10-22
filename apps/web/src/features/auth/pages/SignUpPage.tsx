@@ -104,16 +104,35 @@ export const SignUpPage: React.FC = () => {
       }
 
       const names = fullName.trim().split(' ');
-      const firstName = names[0];
-      const lastName = names.slice(1).join(' ') || undefined;
+      const firstName = names[0] || 'Client';
+      const lastName = names.slice(1).join(' ') || firstName;
+      const baseUsername = email.trim().split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
 
       try {
-        const signUpResult = await clerk.client.signUp.create({
+        const createPayload: any = {
           emailAddress: email.trim(),
           password: password,
           firstName,
           lastName,
-        });
+        };
+
+        const signUpResult = await clerk.client.signUp.create(createPayload);
+
+        if (signUpResult.missingFields && signUpResult.missingFields.length > 0) {
+          const updatePayload: any = {};
+          if (signUpResult.missingFields.includes('username')) {
+            updatePayload.username = baseUsername.length >= 4 ? baseUsername : `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+          }
+          if (signUpResult.missingFields.includes('first_name')) {
+            updatePayload.first_name = firstName;
+          }
+          if (signUpResult.missingFields.includes('last_name')) {
+            updatePayload.last_name = lastName;
+          }
+          if (Object.keys(updatePayload).length > 0) {
+            await clerk.client.signUp.update(updatePayload).catch(() => {});
+          }
+        }
 
         if (signUpResult.status === 'complete' && signUpResult.createdSessionId) {
           await clerk.setActive({ session: signUpResult.createdSessionId });
@@ -182,11 +201,63 @@ export const SignUpPage: React.FC = () => {
         code: verificationCode.trim(),
       });
 
-      if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
-        await clerk.setActive({ session: completeSignUp.createdSessionId });
+      let finalSignUp = completeSignUp;
+
+      // 1. Check if email verification code was invalid or unverified
+      const emailVerif = finalSignUp.verifications?.emailAddress;
+      const unverified = finalSignUp.unverifiedFields || [];
+      if (unverified.includes('email_address') || (emailVerif && emailVerif.status !== 'verified')) {
+        const verifyError =
+          emailVerif?.error?.longMessage ||
+          emailVerif?.error?.message ||
+          'The verification code is incorrect or expired. Please check your email and try again.';
+        setError(verifyError);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. If email was verified but Clerk status remains 'missing_requirements', satisfy missing fields automatically
+      if (finalSignUp.status === 'missing_requirements') {
+        const missing = finalSignUp.missingFields || [];
+        if (missing.length > 0) {
+          const names = fullName.trim().split(' ');
+          const fName = names[0] || 'Client';
+          const lName = names.slice(1).join(' ') || fName;
+          const updatePayload: any = {};
+
+          if (missing.includes('first_name') || missing.includes('firstName')) {
+            updatePayload.firstName = fName;
+            updatePayload.first_name = fName;
+          }
+          if (missing.includes('last_name') || missing.includes('lastName')) {
+            updatePayload.lastName = lName;
+            updatePayload.last_name = lName;
+          }
+          if (missing.includes('password')) {
+            updatePayload.password = password;
+          }
+          if (missing.includes('username')) {
+            const cleanUser = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+            updatePayload.username = cleanUser.length >= 4 ? cleanUser : `${cleanUser}_${Date.now().toString().slice(-4)}`;
+          }
+
+          try {
+            finalSignUp = await clerk.client.signUp.update(updatePayload);
+          } catch (updateErr: any) {
+            console.warn('[SignUpPage] Error satisfying missing fields:', updateErr);
+            const msg = updateErr.errors?.[0]?.message || 'Additional profile details required to complete registration.';
+            setError(msg);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      if (finalSignUp.status === 'complete' && finalSignUp.createdSessionId) {
+        await clerk.setActive({ session: finalSignUp.createdSessionId });
         const token = await clerk.session?.getToken();
         if (token) setAuthToken(token);
-        const realClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
+        const realClerkUserId = finalSignUp.createdUserId || clerk.user?.id;
 
         // Synchronously register in PostgreSQL portal database
         try {
@@ -207,7 +278,11 @@ export const SignUpPage: React.FC = () => {
         window.location.href = redirectUrl;
         return;
       } else {
-        setError(`Verification status: ${completeSignUp.status}. Please check your code.`);
+        const details = [
+          ...(finalSignUp.missingFields ? [`Missing: ${finalSignUp.missingFields.join(', ')}`] : []),
+          ...(finalSignUp.unverifiedFields ? [`Unverified: ${finalSignUp.unverifiedFields.join(', ')}`] : []),
+        ].join('; ');
+        setError(details || 'Verification could not be completed. Please check your code or click Resend.');
       }
     } catch (verifyErr: any) {
       const msg =
