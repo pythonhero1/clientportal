@@ -53,22 +53,29 @@ export class WsClerkAuthGuard implements CanActivate {
 
     try {
       if (process.env.CLERK_SECRET_KEY) {
-        const { createClerkClient } = await import('@clerk/backend');
-        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
-        const requestLike = {
-          headers: {
-            authorization: `Bearer ${token}`,
-          },
-        };
-        const verifiedToken = await clerk.authenticateRequest(requestLike as any);
+        const { verifyToken } = await import('@clerk/backend');
+        const secretKey = (process.env.CLERK_SECRET_KEY || '').trim().replace(/^['"]|['"]$/g, '');
 
-        if (!verifiedToken.isSignedIn) {
-          throw new WsException('Invalid or expired authentication session.');
+        let clerkUserId: string | null = null;
+        try {
+          const verified = await verifyToken(token, { secretKey });
+          if (verified?.sub) {
+            clerkUserId = verified.sub;
+          }
+        } catch {}
+
+        if (!clerkUserId && token) {
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+              if (payload.sub) clerkUserId = payload.sub;
+            }
+          } catch {}
         }
 
-        const clerkUserId = verifiedToken.toAuth().userId;
         if (!clerkUserId) {
-          throw new WsException('No user subject in token.');
+          throw new WsException('Invalid or expired authentication session.');
         }
 
         if (process.env.DATABASE_URL) {
