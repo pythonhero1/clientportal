@@ -17,8 +17,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: process.env.WEB_APP_URL || 'http://localhost:5173',
+    origin: true,
     credentials: true,
+    maxAge: 86400, // 24 hours preflight caching
   });
 
   app.useGlobalPipes(

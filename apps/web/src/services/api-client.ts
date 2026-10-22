@@ -30,6 +30,10 @@ export function getAuthToken(): string | null {
 }
 
 export async function getFreshAuthToken(): Promise<string | null> {
+  const currentToken = getAuthToken();
+  if (currentToken) {
+    return currentToken;
+  }
   if (typeof window !== 'undefined') {
     const win = window as any;
     if (win.Clerk?.session) {
@@ -44,7 +48,7 @@ export async function getFreshAuthToken(): Promise<string | null> {
       }
     }
   }
-  return getAuthToken();
+  return null;
 }
 
 export function apiUrl(path: string): string {

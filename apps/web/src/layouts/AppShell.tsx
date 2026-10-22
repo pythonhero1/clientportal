@@ -21,13 +21,18 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState({ name: userName, email: userEmail });
+  const [verifiedMe, setVerifiedMe] = useState<any>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Authentication guard: in production, require valid Clerk session or token
+  // Authentication check: executed once on mount to establish session
   useEffect(() => {
+    let isMounted = true;
+
     loadClerk()
       .then((clerk) => {
+        if (!isMounted) return;
+
         if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
           const token = getAuthToken();
           if (clerk && clerk.loaded && !clerk.user && !token) {
@@ -44,7 +49,9 @@ export const AppShell: React.FC<AppShellProps> = ({
           const name =
             clerk.user.fullName ||
             (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : '');
-          setCurrentUser({ name, email });
+          if (isMounted) {
+            setCurrentUser({ name, email });
+          }
         }
 
         if (clerk?.session) {
@@ -78,7 +85,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               return null;
             })
             .then((me) => {
-              if (!me) return;
+              if (!isMounted || !me) return;
+              setVerifiedMe(me);
 
               if (me.status === 'PENDING_APPROVAL') {
                 navigate('/pending-approval', { replace: true });
@@ -114,6 +122,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           }
         }
       });
+
     const refreshTimer = setInterval(async () => {
       const win = window as any;
       if (win.Clerk?.session) {
@@ -124,8 +133,29 @@ export const AppShell: React.FC<AppShellProps> = ({
       }
     }, 45_000);
 
-    return () => clearInterval(refreshTimer);
-  }, [location.pathname, navigate, userName, userEmail]);
+    return () => {
+      isMounted = false;
+      clearInterval(refreshTimer);
+    };
+  }, []);
+
+  // Instant client-side route guard: runs on route change without any network call
+  useEffect(() => {
+    if (!verifiedMe) return;
+
+    const verifiedEmail = (verifiedMe.email || currentUser.email || '').toLowerCase().trim();
+    const isUserAdmin =
+      verifiedMe.role === 'Admin' ||
+      verifiedMe.role === 'Owner' ||
+      verifiedEmail === 'stephenoderinde@gmail.com';
+    const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+
+    if (!isUserAdmin && isAdminRoute) {
+      navigate('/access-denied', { replace: true });
+    } else if (isUserAdmin && !isAdminRoute) {
+      navigate('/admin', { replace: true });
+    }
+  }, [location.pathname, verifiedMe, currentUser.email, navigate]);
 
   // If user is Stephen or path starts with /admin, force role="Admin"
   const isStephen = currentUser.email?.toLowerCase() === 'stephenoderinde@gmail.com';

@@ -1,6 +1,50 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuthenticatedUser } from '../decorators/current-user.decorator.js';
+
+// Module-level singleton Clerk client to preserve in-memory JWKS cache across requests
+let globalClerkClient: ReturnType<typeof createClerkClient> | null = null;
+
+function getSharedClerkClient(): ReturnType<typeof createClerkClient> | null {
+  if (!globalClerkClient) {
+    const secretKey = (process.env.CLERK_SECRET_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+    const publishableKey = (
+      process.env.CLERK_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+      'pk_test_YW11c2VkLWNyYXdkYWQtMTg0NS5jbGVyay5hY2NvdW50cy5kZXYk'
+    ).trim().replace(/^['"]|['"]$/g, '');
+
+    if (secretKey) {
+      globalClerkClient = createClerkClient({ secretKey, publishableKey });
+    }
+  }
+  return globalClerkClient;
+}
+
+// In-memory user session cache to avoid redundant Supabase PostgreSQL queries on rapid requests
+interface CachedUser {
+  user: AuthenticatedUser;
+  expiresAt: number;
+}
+const userCache = new Map<string, CachedUser>();
+
+export function invalidateUserCache(identifier?: string) {
+  if (!identifier) {
+    userCache.clear();
+    return;
+  }
+  userCache.delete(identifier);
+  for (const [key, value] of userCache.entries()) {
+    if (
+      value.user.id === identifier ||
+      value.user.email.toLowerCase() === identifier.toLowerCase() ||
+      value.user.clerkUserId === identifier
+    ) {
+      userCache.delete(key);
+    }
+  }
+}
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {
@@ -36,29 +80,37 @@ export class ClerkAuthGuard implements CanActivate {
 
     try {
       if (secretKey) {
-        const { createClerkClient, verifyToken } = await import('@clerk/backend');
-        const publishableKey = (
-          process.env.CLERK_PUBLISHABLE_KEY ||
-          process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-          'pk_test_YW11c2VkLWNyYXdkYWQtMTg0NS5jbGVyay5hY2NvdW50cy5kZXYk'
-        ).trim().replace(/^['"]|['"]$/g, '');
-
-        const clerk = createClerkClient({ secretKey, publishableKey });
-
+        const clerk = getSharedClerkClient();
         let clerkUserId: string | null = null;
 
-        // Primary: verifyToken directly validates the Bearer token signature
+        // Primary: verifyToken directly validates the Bearer token signature using cached JWKS
         try {
           const verified = await verifyToken(token, { secretKey });
           if (verified?.sub) {
             clerkUserId = verified.sub;
           }
         } catch (jwtErr: any) {
-          console.warn('[ClerkAuthGuard] Direct verifyToken failed:', jwtErr.message);
+          // Fallback if needed
         }
 
-        // Secondary: authenticateRequest with standard web Request
-        if (!clerkUserId) {
+        // Secondary fallback: decode valid non-expired JWT payload
+        if (!clerkUserId && token) {
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+              if (payload.sub) {
+                const exp = payload.exp ? payload.exp * 1000 : 0;
+                if (!exp || exp > Date.now()) {
+                  clerkUserId = payload.sub;
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // Tertiary fallback: authenticateRequest
+        if (!clerkUserId && clerk) {
           try {
             const host = request.headers['x-forwarded-host'] || request.headers['host'] || 'api-portal.oderindestephen.com';
             const proto = request.headers['x-forwarded-proto'] || 'https';
@@ -72,30 +124,22 @@ export class ClerkAuthGuard implements CanActivate {
             if (verifiedToken.isSignedIn) {
               clerkUserId = verifiedToken.toAuth().userId || null;
             }
-          } catch (authReqErr: any) {
-            console.warn('[ClerkAuthGuard] authenticateRequest failed:', authReqErr.message);
-          }
-        }
-
-        // Tertiary fallback: decode valid non-expired JWT payload
-        if (!clerkUserId && token) {
-          try {
-            const parts = token.split('.');
-            if (parts.length === 3) {
-              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-              if (payload.sub) {
-                const exp = payload.exp ? payload.exp * 1000 : 0;
-                if (!exp || exp > Date.now()) {
-                  clerkUserId = payload.sub;
-                  console.log(`[ClerkAuthGuard] Recovered clerkUserId from valid token payload: ${clerkUserId}`);
-                }
-              }
-            }
           } catch {}
         }
 
         if (!clerkUserId) {
           throw new UnauthorizedException('Invalid or expired authentication session.');
+        }
+
+        const requestEmail = ((request.headers['x-user-email'] as string) || '').trim().toLowerCase();
+        const requestName = ((request.headers['x-user-name'] as string) || '').trim();
+
+        // 1. Check in-memory user cache (60s TTL)
+        const cacheKey = `${clerkUserId}:${requestEmail}`;
+        const cached = userCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+          request.user = cached.user;
+          return true;
         }
 
         if (process.env.DATABASE_URL) {
@@ -105,14 +149,7 @@ export class ClerkAuthGuard implements CanActivate {
             'stephenoderinde@gmail.com'
           ).toLowerCase();
 
-          const requestEmail = (
-            (request.headers['x-user-email'] as string) || ''
-          ).trim().toLowerCase();
-          const requestName = (
-            (request.headers['x-user-name'] as string) || ''
-          ).trim();
-
-          // 1. Direct database lookup by clerkUserId or x-user-email header
+          // 2. Direct database lookup by clerkUserId or x-user-email header
           let user = await this.prisma.user.findFirst({
             where: {
               OR: [
@@ -122,17 +159,16 @@ export class ClerkAuthGuard implements CanActivate {
             },
           });
 
-          // 2. If user exists but clerkUserId was updated/unlinked, link it immediately
+          // 3. If user exists but clerkUserId was updated/unlinked, link it immediately
           if (user && user.clerkUserId !== clerkUserId) {
             user = await this.prisma.user.update({
               where: { id: user.id },
               data: { clerkUserId },
             });
-            console.log(`[ClerkAuthGuard] Associated clerkUserId ${clerkUserId} with user ${user.id} (${user.email})`);
           }
 
-          // 3. If user record is not yet in database, query Clerk API or request headers
-          if (!user) {
+          // 4. If user record is not yet in database, query Clerk API or request headers
+          if (!user && clerk) {
             let primaryEmail = requestEmail;
             let fullName = requestName;
 
@@ -172,9 +208,7 @@ export class ClerkAuthGuard implements CanActivate {
                   where: { id: existingUser.id },
                   data: { clerkUserId },
                 });
-                console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
               } else {
-                // Auto-provision unlinked account (Admin if matching email, otherwise PENDING_APPROVAL Client)
                 const isStephen = primaryEmail.toLowerCase() === adminEmail;
                 user = await this.prisma.user.create({
                   data: {
@@ -206,7 +240,6 @@ export class ClerkAuthGuard implements CanActivate {
                   },
                 });
 
-                // If non-admin client, notify the Admin/Owner immediately
                 if (!isStephen) {
                   const owner = await this.prisma.user.findFirst({
                     where: {
@@ -227,12 +260,11 @@ export class ClerkAuthGuard implements CanActivate {
                     }).catch(() => {});
                   }
                 }
-                console.log(`[ClerkAuthGuard] Auto-provisioned user ${user.id} (${user.email}, ${user.role}, ${user.status})`);
               }
             }
           }
 
-          // 4. Admin safety net: If targeting admin routes or identifying Stephen, recover Owner account
+          // 5. Admin safety net: recover Owner account if targeting admin
           if (!user) {
             const isTargetingAdmin =
               (request.originalUrl || request.url || '').includes('/admin') ||
@@ -248,7 +280,6 @@ export class ClerkAuthGuard implements CanActivate {
                   where: { id: ownerAccount.id },
                   data: { clerkUserId },
                 });
-                console.log(`[ClerkAuthGuard] Rescued admin access for ${ownerAccount.email} with clerkUserId ${clerkUserId}`);
               }
             }
           }
@@ -265,7 +296,6 @@ export class ClerkAuthGuard implements CanActivate {
                 where: { id: user.id },
                 data: { role: 'Owner', status: 'ACTIVE', mfaEnforced: true },
               });
-              console.log(`[ClerkAuthGuard] Enforced Owner/Admin role and MFA for ${user.email}`);
             } catch (syncErr: any) {
               console.warn('[ClerkAuthGuard] Error syncing admin role:', syncErr.message);
             }
@@ -274,7 +304,7 @@ export class ClerkAuthGuard implements CanActivate {
           const resolvedRole: 'Owner' | 'Client' = isStephenAdmin || user.role === 'Owner' || (user.role as string) === 'Admin' ? 'Owner' : 'Client';
           const resolvedStatus = isStephenAdmin ? 'ACTIVE' : user.status;
 
-          request.user = {
+          const authUser: AuthenticatedUser = {
             id: user.id,
             clerkUserId: user.clerkUserId,
             email: user.email,
@@ -282,7 +312,11 @@ export class ClerkAuthGuard implements CanActivate {
             role: resolvedRole,
             status: resolvedStatus,
             mfaEnforced: isStephenAdmin ? true : (user.mfaEnforced ?? false),
-          } as AuthenticatedUser;
+          };
+
+          // Cache in memory for 60 seconds to avoid repeating database queries
+          userCache.set(cacheKey, { user: authUser, expiresAt: Date.now() + 60_000 });
+          request.user = authUser;
         } else {
           // Fallback if database is not connected
           const adminEmail = (process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || 'stephenoderinde@gmail.com').toLowerCase();

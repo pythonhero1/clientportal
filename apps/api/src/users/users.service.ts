@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { createClerkClient } from '@clerk/backend';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto.js';
+import { invalidateUserCache } from '../auth/guards/clerk-auth.guard.js';
 
 @Injectable()
 export class UsersService {
@@ -488,7 +489,9 @@ export class UsersService {
       return [];
     }
 
-    await this.syncClerkUsers(forceSync);
+    if (forceSync) {
+      await this.syncClerkUsers(true);
+    }
 
     const users = await this.prisma.user.findMany({
       where: { status: 'PENDING_APPROVAL' },
@@ -521,8 +524,6 @@ export class UsersService {
     if (!process.env.DATABASE_URL) {
       return [];
     }
-
-    await this.syncClerkUsers();
 
     const clients = await this.prisma.user.findMany({
       where: { role: 'Client' },
@@ -582,6 +583,9 @@ export class UsersService {
       where: { id: userId },
       data: { status: 'SUSPENDED' },
     });
+
+    invalidateUserCache(userId);
+    invalidateUserCache(user.email);
 
     // Revoke any active Clerk sessions for this user
     const clerk = this.getClerkClient();
@@ -663,6 +667,8 @@ export class UsersService {
       await this.prisma.profile.deleteMany({ where: { userId } });
 
       await this.prisma.user.delete({ where: { id: userId } });
+      invalidateUserCache(userId);
+      invalidateUserCache(user.email);
     } catch (dbErr: any) {
       this.logger.error(`Database deletion error for user ${user.email}: ${dbErr.message}`, dbErr.stack);
       throw new BadRequestException(`Failed to delete user database records: ${dbErr.message}`);
@@ -704,6 +710,9 @@ export class UsersService {
       where: { id: userId },
       data: { status: 'SUSPENDED' },
     });
+
+    invalidateUserCache(userId);
+    invalidateUserCache(user.email);
 
     if (actorId) {
       await this.prisma.auditLog.create({
