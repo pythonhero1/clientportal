@@ -441,9 +441,30 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
+    let clerkUserId = user.clerkUserId;
+    const clerk = this.getClerkClient();
+    if (clerk && user.email) {
+      try {
+        const clerkUsersResponse = await clerk.users.getUserList({ emailAddress: [user.email] });
+        const clerkUsers = (clerkUsersResponse as any)?.data || clerkUsersResponse;
+        if (Array.isArray(clerkUsers) && clerkUsers.length > 0) {
+          const cu = clerkUsers[0];
+          if (cu?.id && cu.id !== user.clerkUserId) {
+            clerkUserId = cu.id;
+            this.logger.log(`Linked verified Clerk ID ${clerkUserId} for activated user ${user.email}`);
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not reconcile Clerk user during activation for ${user.email}: ${err.message}`);
+      }
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: { status: 'ACTIVE' },
+      data: {
+        status: 'ACTIVE',
+        ...(clerkUserId !== user.clerkUserId ? { clerkUserId } : {}),
+      },
     });
 
     await this.prisma.auditLog.create({

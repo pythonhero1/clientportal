@@ -5,9 +5,12 @@ import { loadClerk } from '../../../services/clerk-client';
 import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
 
 export const SignUpPage: React.FC = () => {
+  const [step, setStep] = useState<'form' | 'verify'>('form');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(60);
   const [invitationToken] = useState(() => {
     return new URLSearchParams(window.location.search).get('token') || '';
   });
@@ -40,7 +43,33 @@ export const SignUpPage: React.FC = () => {
     };
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Countdown timer for code resend during verification step
+  useEffect(() => {
+    if (step === 'verify' && countdown > 0) {
+      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [step, countdown]);
+
+  const handleResend = async () => {
+    if (countdown > 0) return;
+    setError(null);
+    try {
+      const clerk = await loadClerk();
+      if (clerk?.client?.signUp) {
+        await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        setCountdown(60);
+      } else {
+        setError('Verification session expired. Please re-enter your details.');
+        setStep('form');
+      }
+    } catch (err: any) {
+      const msg = err.errors?.[0]?.message || 'Failed to resend code. Please try again.';
+      setError(msg);
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -48,6 +77,12 @@ export const SignUpPage: React.FC = () => {
     try {
       if (!fullName.trim() || !email.trim() || !password) {
         setError('Please fill in all required fields.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (email.trim().toLowerCase() === 'stephenoderinde@gmail.com') {
+        setError('stephenoderinde@gmail.com is the Administrator account. Please use the Admin login at portal.oderindestephen.com/admin.');
         setIsLoading(false);
         return;
       }
@@ -80,7 +115,80 @@ export const SignUpPage: React.FC = () => {
           lastName,
         });
 
-        // Notify backend to create pending client and dispatch admin notification immediately
+        if (signUpResult.status === 'complete' && signUpResult.createdSessionId) {
+          await clerk.setActive({ session: signUpResult.createdSessionId });
+          const token = await clerk.session?.getToken();
+          if (token) setAuthToken(token);
+          const realClerkUserId = signUpResult.createdUserId || clerk.user?.id;
+
+          await fetch(`${API_BASE_URL}/api/auth/register-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim(),
+              name: fullName.trim(),
+              clerkUserId: realClerkUserId,
+            }),
+          }).catch(() => {});
+
+          const redirectUrl = await determineAuthenticatedRedirect(token);
+          window.location.href = redirectUrl;
+          return;
+        }
+
+        try {
+          await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        } catch (prepErr: any) {
+          console.warn('[SignUpPage] prepareEmailAddressVerification notice:', prepErr?.message);
+        }
+
+        setStep('verify');
+        setCountdown(60);
+      } catch (clerkErr: any) {
+        const msg =
+          clerkErr.errors?.[0]?.longMessage ||
+          clerkErr.errors?.[0]?.message ||
+          'Registration failed.';
+        setError(msg);
+      }
+    } catch {
+      setError('Unable to register. Please check your network connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    if (!verificationCode.trim()) {
+      setError('Please enter the 6-digit confirmation code.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const clerk = await loadClerk();
+      if (!clerk?.client?.signUp) {
+        setError('Registration session not found. Please re-enter your details.');
+        setStep('form');
+        setIsLoading(false);
+        return;
+      }
+
+      const completeSignUp = await clerk.client.signUp.attemptEmailAddressVerification({
+        code: verificationCode.trim(),
+      });
+
+      if (completeSignUp.status === 'complete' && completeSignUp.createdSessionId) {
+        await clerk.setActive({ session: completeSignUp.createdSessionId });
+        const token = await clerk.session?.getToken();
+        if (token) setAuthToken(token);
+        const realClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
+
+        // Synchronously register in PostgreSQL portal database
         try {
           await fetch(`${API_BASE_URL}/api/auth/register-client`, {
             method: 'POST',
@@ -88,27 +196,25 @@ export const SignUpPage: React.FC = () => {
             body: JSON.stringify({
               email: email.trim(),
               name: fullName.trim(),
-              clerkUserId: signUpResult?.createdUserId || undefined,
+              clerkUserId: realClerkUserId,
             }),
           });
-        } catch (err) {
-          console.warn('[SignUpPage] register-client notify error:', err);
+        } catch (regErr) {
+          console.warn('[SignUpPage] register-client notify error:', regErr);
         }
 
-        await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-        window.location.href = `/verify-email?email=${encodeURIComponent(email.trim())}`;
+        const redirectUrl = await determineAuthenticatedRedirect(token);
+        window.location.href = redirectUrl;
         return;
-      } catch (clerkErr: any) {
-        const msg =
-          clerkErr.errors?.[0]?.longMessage ||
-          clerkErr.errors?.[0]?.message ||
-          'Registration failed.';
-        setError(msg);
-        setIsLoading(false);
-        return;
+      } else {
+        setError(`Verification status: ${completeSignUp.status}. Please check your code.`);
       }
-    } catch {
-      setError('Unable to register. Please check your network connection.');
+    } catch (verifyErr: any) {
+      const msg =
+        verifyErr.errors?.[0]?.longMessage ||
+        verifyErr.errors?.[0]?.message ||
+        'Verification code incorrect or expired. Please check your email and try again.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -137,13 +243,73 @@ export const SignUpPage: React.FC = () => {
     );
   }
 
+  if (step === 'verify') {
+    return (
+      <AuthLayout
+        tag="IDENTITY VERIFICATION"
+        title="Verify your email"
+        subtitle={`We sent a 6-digit confirmation code to ${email}. Enter the code below to complete registration.`}
+      >
+        <form onSubmit={handleVerifySubmit} style={formStyle}>
+          {error && <div style={errorBannerStyle}>{error}</div>}
+
+          <div style={fieldGroupStyle}>
+            <label htmlFor="verificationCode" style={labelStyle}>
+              Verification code
+            </label>
+            <input
+              id="verificationCode"
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              maxLength={6}
+              placeholder="123456"
+              autoFocus
+              required
+              style={{ ...inputStyle, textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.25em' }}
+            />
+          </div>
+
+          <div style={resendRowStyle}>
+            <span style={resendTextStyle}>Didn't receive the code?</span>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={countdown > 0}
+              style={resendButtonStyle}
+            >
+              {countdown > 0 ? `Resend in ${countdown}s` : 'Resend code'}
+            </button>
+          </div>
+
+          <button type="submit" disabled={isLoading} style={submitButtonStyle}>
+            {isLoading ? 'Verifying...' : 'Verify & complete registration'}
+          </button>
+
+          <div style={footerLinkContainerStyle}>
+            <button
+              type="button"
+              onClick={() => {
+                setStep('form');
+                setError(null);
+              }}
+              style={backButtonStyle}
+            >
+              &larr; Back to edit details
+            </button>
+          </div>
+        </form>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       tag="CLIENT WORKSPACE"
       title="Create your account"
       subtitle="Join your dedicated client workspace to view active projects, files, and deliverables."
     >
-      <form onSubmit={handleSubmit} style={formStyle}>
+      <form onSubmit={handleFormSubmit} style={formStyle}>
         {error && <div style={errorBannerStyle}>{error}</div>}
 
         <div style={fieldGroupStyle}>
@@ -263,6 +429,27 @@ const inputStyle: React.CSSProperties = {
   textAlign: 'left',
 };
 
+const resendRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  fontSize: '0.8125rem',
+};
+
+const resendTextStyle: React.CSSProperties = {
+  color: 'var(--muted-text)',
+};
+
+const resendButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--primary-link)',
+  cursor: 'pointer',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  padding: 0,
+};
+
 const submitButtonStyle: React.CSSProperties = {
   backgroundColor: 'var(--primary)',
   color: '#FFFFFF',
@@ -291,4 +478,14 @@ const signInLinkStyle: React.CSSProperties = {
   fontSize: '0.8125rem',
   fontWeight: 500,
   color: 'var(--primary-link)',
+};
+
+const backButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--primary-link)',
+  cursor: 'pointer',
+  fontWeight: 500,
+  fontSize: '0.8125rem',
+  padding: 0,
 };

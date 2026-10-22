@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
 import { API_BASE_URL, setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
+import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
 
 export const VerifyEmailPage: React.FC = () => {
   const [code, setCode] = useState('');
@@ -23,13 +24,18 @@ export const VerifyEmailPage: React.FC = () => {
 
   const handleResend = async () => {
     if (!canResend) return;
-    setCountdown(60);
     setError(null);
     try {
       const clerk = await loadClerk();
-      await clerk?.client?.signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
+      if (clerk?.client?.signUp) {
+        await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        setCountdown(60);
+      } else {
+        setError('Verification session not found. Please start registration from /sign-up.');
+      }
     } catch (err: any) {
       console.warn('[VerifyEmailPage] Resend code error:', err);
+      setError(err?.errors?.[0]?.message || 'Failed to resend verification code.');
     }
   };
 
@@ -37,7 +43,7 @@ export const VerifyEmailPage: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    if (!code) {
+    if (!code.trim()) {
       setError('Please enter the verification code.');
       return;
     }
@@ -45,45 +51,50 @@ export const VerifyEmailPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      let verifiedClerkUserId: string | undefined;
-      let verifiedName: string | undefined;
+      const clerk = await loadClerk();
+      if (!clerk?.client?.signUp) {
+        setError('No active registration session found in your browser. Please register at /sign-up.');
+        setIsLoading(false);
+        return;
+      }
 
-      try {
-        const clerk = await loadClerk();
-        if (clerk?.client?.signUp) {
-          const completeSignUp = await clerk.client.signUp.attemptEmailAddressVerification({ code: code.trim() });
-          if (completeSignUp?.status === 'complete' && completeSignUp.createdSessionId) {
-            await clerk.setActive({ session: completeSignUp.createdSessionId });
-            const token = await clerk.session?.getToken();
-            if (token) setAuthToken(token);
-            verifiedClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
-            verifiedName = clerk.user?.fullName;
+      const completeSignUp = await clerk.client.signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (completeSignUp?.status === 'complete' && completeSignUp.createdSessionId) {
+        await clerk.setActive({ session: completeSignUp.createdSessionId });
+        const token = await clerk.session?.getToken();
+        if (token) setAuthToken(token);
+        const verifiedClerkUserId = completeSignUp.createdUserId || clerk.user?.id;
+        const verifiedName = clerk.user?.fullName;
+
+        // Synchronously register in backend database
+        if (email && email !== 'your email address') {
+          try {
+            await fetch(`${API_BASE_URL}/api/auth/register-client`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: email.trim(),
+                clerkUserId: verifiedClerkUserId,
+                name: verifiedName,
+              }),
+            });
+          } catch (regErr) {
+            console.warn('[VerifyEmailPage] register-client notify error:', regErr);
           }
         }
-      } catch (clerkErr: any) {
-        console.warn('[VerifyEmailPage] Clerk verification step:', clerkErr?.message);
-      }
 
-      // Notify backend to ensure user row exists and owner is notified
-      if (email && email !== 'your email address') {
-        try {
-          await fetch(`${API_BASE_URL}/api/auth/register-client`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email.trim(),
-              clerkUserId: verifiedClerkUserId,
-              name: verifiedName,
-            }),
-          });
-        } catch (regErr) {
-          console.warn('[VerifyEmailPage] register-client notify error:', regErr);
-        }
+        const redirectUrl = await determineAuthenticatedRedirect(token);
+        window.location.href = redirectUrl;
+        return;
+      } else {
+        setError(`Verification status: ${completeSignUp?.status || 'incomplete'}. Please check your code.`);
       }
-
-      window.location.href = '/pending-approval';
-    } catch {
-      setError('Verification failed. The code may be incorrect or expired.');
+    } catch (clerkErr: any) {
+      const msg =
+        clerkErr.errors?.[0]?.longMessage ||
+        clerkErr.errors?.[0]?.message ||
+        'Verification failed. The code may be incorrect or expired.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
