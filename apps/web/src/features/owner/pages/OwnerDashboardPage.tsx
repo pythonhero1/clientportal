@@ -1,10 +1,67 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Users, FolderKanban, FileCheck2, CreditCard, Shield, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../../../services/api-client';
+import { getAuthHeaders } from '../../../services/projects-api';
 
 export const OwnerDashboardPage: React.FC = () => {
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [projectsCount, setProjectsCount] = useState<number>(0);
+  const [filesCount, setFilesCount] = useState<number>(0);
+  const [billedTotal, setBilledTotal] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function loadMetrics() {
+      try {
+        const headers = getAuthHeaders();
+        const [usersRes, projsRes, filesRes, invRes] = await Promise.allSettled([
+          fetch(`${API_BASE_URL}/api/admin/users/pending`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/projects`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/files/lifecycle`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/invoices`, { headers }),
+        ]);
+
+        if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
+          const users = await usersRes.value.json();
+          setPendingCount(Array.isArray(users) ? users.length : 0);
+        }
+
+        if (projsRes.status === 'fulfilled' && projsRes.value.ok) {
+          const projs = await projsRes.value.json();
+          setProjectsCount(Array.isArray(projs) ? projs.length : 0);
+        }
+
+        if (filesRes.status === 'fulfilled' && filesRes.value.ok) {
+          const files = await filesRes.value.json();
+          setFilesCount(Array.isArray(files) ? files.length : 0);
+        }
+
+        if (invRes.status === 'fulfilled' && invRes.value.ok) {
+          const invoices = await invRes.value.json();
+          if (Array.isArray(invoices)) {
+            const sum = invoices.reduce((acc: number, inv: any) => {
+              const amount = parseFloat(inv.totalAmount || inv.amountPaid || '0');
+              return acc + (isNaN(amount) ? 0 : amount);
+            }, 0);
+            setBilledTotal(sum);
+          }
+        }
+      } catch {
+        // Fallback gracefully to live 0 counts
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMetrics();
+  }, []);
+
+  const formatBilled = (val: number) => {
+    return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <div className="space-y-6 text-left">
       {/* Owner Suite Banner */}
@@ -32,7 +89,9 @@ export const OwnerDashboardPage: React.FC = () => {
             </span>
             <Users className="w-4 h-4 text-[var(--warning-text)]" />
           </div>
-          <p className="text-2xl font-bold text-[var(--text)]">1 Registration</p>
+          <p className="text-2xl font-bold text-[var(--text)]">
+            {loading ? '...' : `${pendingCount} ${pendingCount === 1 ? 'Registration' : 'Registrations'}`}
+          </p>
           <Link to="/owner/clients" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Review Queue <ArrowRight className="w-3 h-3" />
           </Link>
@@ -45,7 +104,9 @@ export const OwnerDashboardPage: React.FC = () => {
             </span>
             <FolderKanban className="w-4 h-4 text-[var(--primary)]" />
           </div>
-          <p className="text-2xl font-bold text-[var(--text)]">2 Projects</p>
+          <p className="text-2xl font-bold text-[var(--text)]">
+            {loading ? '...' : `${projectsCount} ${projectsCount === 1 ? 'Project' : 'Projects'}`}
+          </p>
           <Link to="/owner/projects" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Manage Projects <ArrowRight className="w-3 h-3" />
           </Link>
@@ -58,7 +119,9 @@ export const OwnerDashboardPage: React.FC = () => {
             </span>
             <FileCheck2 className="w-4 h-4 text-[var(--accent-cyan)]" />
           </div>
-          <p className="text-2xl font-bold text-[var(--text)]">1 Deliverable</p>
+          <p className="text-2xl font-bold text-[var(--text)]">
+            {loading ? '...' : `${filesCount} ${filesCount === 1 ? 'Deliverable' : 'Deliverables'}`}
+          </p>
           <Link to="/owner/files" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             View Files <ArrowRight className="w-3 h-3" />
           </Link>
@@ -71,7 +134,9 @@ export const OwnerDashboardPage: React.FC = () => {
             </span>
             <CreditCard className="w-4 h-4 text-[var(--success-text)]" />
           </div>
-          <p className="text-2xl font-bold text-[var(--text)]">$3,500.00</p>
+          <p className="text-2xl font-bold text-[var(--text)]">
+            {loading ? '...' : formatBilled(billedTotal)}
+          </p>
           <Link to="/owner/invoices" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Invoice Ledger <ArrowRight className="w-3 h-3" />
           </Link>

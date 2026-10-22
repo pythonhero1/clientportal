@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
@@ -7,6 +7,7 @@ import { useOwnerMeetings } from '../hooks/useOwnerMeetings';
 import { AssignMeetingProjectModal } from '../components/AssignMeetingProjectModal';
 import { MeetingDetailModal } from '../../meetings/components/MeetingDetailModal';
 import type { Meeting } from '../../../services/meetings-api';
+import { fetchOwnerProjects } from '../../../services/projects-api';
 import { Video, Calendar, Clock, Filter, ExternalLink, Link2, ShieldCheck } from 'lucide-react';
 
 export const OwnerMeetingsPage: React.FC = () => {
@@ -20,10 +21,19 @@ export const OwnerMeetingsPage: React.FC = () => {
     reassignMeeting,
   } = useOwnerMeetings();
 
+  const [projectOptions, setProjectOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [triageMeeting, setTriageMeeting] = useState<Meeting | null>(null);
   const [isAssignOpen, setIsAssignOpen] = useState<boolean>(false);
   const [detailMeeting, setDetailMeeting] = useState<Meeting | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetchOwnerProjects()
+      .then((data) => {
+        if (Array.isArray(data)) setProjectOptions(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const activeMeetings = meetings.filter((m) => m.status === 'ACCEPTED').length;
   const rescheduledMeetings = meetings.filter((m) => m.status === 'RESCHEDULED').length;
@@ -119,8 +129,11 @@ export const OwnerMeetingsPage: React.FC = () => {
             className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] cursor-pointer"
           >
             <option value="">All Client Projects</option>
-            <option value="proj_1">Stephen Showcase Website (proj_1)</option>
-            <option value="proj_2">Alpha Brand Redesign (proj_2)</option>
+            {projectOptions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
 
           <select

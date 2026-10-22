@@ -301,7 +301,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Staging Environment, Production Store"
                   value={webName}
                   onChange={(e) => setWebName(e.target.value)}
                   style={inputStyle}
@@ -312,7 +311,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <input
                   type="url"
                   required
-                  placeholder="https://staging.example.com"
                   value={webUrl}
                   onChange={(e) => setWebUrl(e.target.value)}
                   style={inputStyle}
@@ -348,7 +346,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Component Library & Dark Theme Sign-Off"
                   value={msTitle}
                   onChange={(e) => setMsTitle(e.target.value)}
                   style={inputStyle}
@@ -358,7 +355,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <label style={labelStyle}>Description</label>
                 <textarea
                   rows={3}
-                  placeholder="Scope deliverables included in this phase."
                   value={msDesc}
                   onChange={(e) => setMsDesc(e.target.value)}
                   style={textareaStyle}
@@ -387,7 +383,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Brand Creative Brief V2"
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
                   style={inputStyle}
@@ -398,7 +393,6 @@ export const OwnerProjectDetailPage: React.FC = () => {
                 <input
                   type="url"
                   required
-                  placeholder="https://docs.google.com/document/d/.../edit"
                   value={docUrl}
                   onChange={(e) => setDocUrl(e.target.value)}
                   style={inputStyle}

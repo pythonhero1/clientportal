@@ -147,7 +147,6 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Homepage Design Mockup"
                 required
                 disabled={isUploading}
                 className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-hidden focus:ring-2 focus:ring-[var(--primary)]"

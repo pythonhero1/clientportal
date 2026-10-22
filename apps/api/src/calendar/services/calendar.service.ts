@@ -278,45 +278,7 @@ export class CalendarService {
   }> {
     if (!process.env.DATABASE_URL) {
       return {
-        events: [
-          {
-            id: 'meeting_mock_1',
-            type: 'MEETING',
-            title: 'Wireframe Review [Stephen Showcase Website]',
-            date: '2026-10-21T15:00:00.000Z',
-            status: 'ACCEPTED',
-            colorVariant: 'primary',
-            metadata: {
-              calBookingUid: 'cal_uid_1',
-              projectName: 'Stephen Showcase Website',
-            },
-          },
-          {
-            id: 'milestone_mock_1',
-            type: 'MILESTONE',
-            title: 'Milestone: Architecture Approval [Stephen Showcase Website]',
-            date: '2026-10-23T18:00:00.000Z',
-            status: 'PLANNED',
-            colorVariant: 'accent',
-            metadata: {
-              milestoneId: 'ms_1',
-              projectName: 'Stephen Showcase Website',
-            },
-          },
-          {
-            id: 'invoice_mock_1',
-            type: 'INVOICE',
-            title: 'Invoice Due: INV-2026-0001 [Stephen Showcase Website]',
-            date: '2026-10-25T12:00:00.000Z',
-            status: 'ISSUED',
-            colorVariant: 'warning',
-            metadata: {
-              invoiceId: 'inv_1',
-              invoiceNumber: 'INV-2026-0001',
-              projectName: 'Stephen Showcase Website',
-            },
-          },
-        ],
+        events: [],
         timezone: 'Africa/Lagos',
       };
     }

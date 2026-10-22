@@ -84,7 +84,6 @@ export const CancelInvoiceModal: React.FC<CancelInvoiceModalProps> = ({
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Scope adjusted, superseded by revised deliverable schedule"
               className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)] resize-none"
             />
           </div>

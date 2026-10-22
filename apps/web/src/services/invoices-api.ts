@@ -72,137 +72,7 @@ function isOfflineOrGatewayError(status?: number): boolean {
 }
 
 let mockSequenceCounter = 3;
-const inMemoryMockInvoices: InvoiceRecord[] = [
-  {
-    id: 'inv_mock_1',
-    invoiceNumber: 'INV-2026-0001',
-    projectId: 'proj_1',
-    clientId: 'client_a',
-    status: 'ISSUED',
-    currency: 'USD',
-    subtotal: '2500.00',
-    taxRate: '0.00',
-    taxAmount: '0.00',
-    totalAmount: '2500.00',
-    amountPaid: '0.00',
-    dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
-    issuedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-    paidAt: null,
-    notes: 'Initial milestone deliverables invoice for showcase website.',
-    items: [
-      {
-        id: 'it_1',
-        description: 'Phase 1: Architecture, Wireframes & Information Architecture',
-        quantity: 1,
-        unitPrice: '2500.00',
-        amount: '2500.00',
-        orderIndex: 0,
-      },
-    ],
-    payments: [],
-    project: {
-      id: 'proj_1',
-      name: 'Stephen Showcase Website',
-    },
-    client: {
-      id: 'client_a',
-      name: 'Alpha Client (Project 1)',
-      email: 'client_a@example.com',
-    },
-    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: 'inv_mock_2',
-    invoiceNumber: 'INV-2026-0002',
-    projectId: 'proj_1',
-    clientId: 'client_a',
-    status: 'PAID',
-    currency: 'USD',
-    subtotal: '1500.00',
-    taxRate: '0.00',
-    taxAmount: '0.00',
-    totalAmount: '1500.00',
-    amountPaid: '1500.00',
-    dueDate: new Date(Date.now() - 5 * 86400000).toISOString(),
-    issuedAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-    paidAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-    notes: 'Project Kickoff & Onboarding Retainer.',
-    items: [
-      {
-        id: 'it_2',
-        description: 'Project Initiation, Domain Setup & Kickoff Discovery',
-        quantity: 1,
-        unitPrice: '1500.00',
-        amount: '1500.00',
-        orderIndex: 0,
-      },
-    ],
-    payments: [
-      {
-        id: 'pay_1',
-        amount: '1500.00',
-        currency: 'USD',
-        method: 'BANK_TRANSFER',
-        status: 'CONFIRMED',
-        reference: 'WIRE-98234710',
-        evidenceNote: 'Settled via Citi wire transfer',
-        confirmedAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-      },
-    ],
-    project: {
-      id: 'proj_1',
-      name: 'Stephen Showcase Website',
-    },
-    client: {
-      id: 'client_a',
-      name: 'Alpha Client (Project 1)',
-      email: 'client_a@example.com',
-    },
-    createdAt: new Date(Date.now() - 21 * 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-  },
-  {
-    id: 'inv_mock_3',
-    invoiceNumber: null,
-    projectId: 'proj_2',
-    clientId: 'client_b',
-    status: 'DRAFT',
-    currency: 'USD',
-    subtotal: '3200.00',
-    taxRate: '5.00',
-    taxAmount: '160.00',
-    totalAmount: '3360.00',
-    amountPaid: '0.00',
-    dueDate: new Date(Date.now() + 21 * 86400000).toISOString(),
-    issuedAt: null,
-    paidAt: null,
-    notes: 'Draft scope for full e-commerce integration and staging deployment.',
-    items: [
-      {
-        id: 'it_3',
-        description: 'Custom Headless Storefront & Checkout Flow',
-        quantity: 1,
-        unitPrice: '3200.00',
-        amount: '3200.00',
-        orderIndex: 0,
-      },
-    ],
-    payments: [],
-    project: {
-      id: 'proj_2',
-      name: 'Beta Brand Modernization',
-    },
-    client: {
-      id: 'client_b',
-      name: 'Beta Client (Project 2)',
-      email: 'client_b@example.com',
-    },
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-];
+const inMemoryMockInvoices: InvoiceRecord[] = [];
 
 function getMockLedger(filters?: { status?: string; projectId?: string; clientId?: string }): InvoiceRecord[] {
   let list = [...inMemoryMockInvoices];
@@ -354,97 +224,16 @@ export async function fetchOwnerLedger(filters?: {
 }
 
 export async function createDraftInvoice(payload: CreateInvoicePayload): Promise<InvoiceRecord> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/invoices`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-    const contentType = res.headers.get('content-type') || '';
-    if (!res.ok || contentType.includes('text/html') || isOfflineOrGatewayError(res.status)) {
-      const subtotalNum = payload.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-      const taxRateNum = payload.taxRate || 0;
-      const taxAmountNum = (subtotalNum * taxRateNum) / 100;
-      const totalAmountNum = subtotalNum + taxAmountNum;
-
-      const newInvoice: InvoiceRecord = {
-        id: `inv_mock_${Date.now()}`,
-        invoiceNumber: null,
-        projectId: payload.projectId,
-        clientId: payload.clientId,
-        status: 'DRAFT',
-        currency: payload.currency || 'USD',
-        subtotal: subtotalNum.toFixed(2),
-        taxRate: taxRateNum.toFixed(2),
-        taxAmount: taxAmountNum.toFixed(2),
-        totalAmount: totalAmountNum.toFixed(2),
-        amountPaid: '0.00',
-        dueDate: payload.dueDate,
-        issuedAt: null,
-        paidAt: null,
-        notes: payload.notes || null,
-        items: payload.items.map((it, idx) => ({
-          id: `it_${Date.now()}_${idx}`,
-          description: it.description,
-          quantity: it.quantity,
-          unitPrice: it.unitPrice.toFixed(2),
-          amount: (it.quantity * it.unitPrice).toFixed(2),
-          orderIndex: idx,
-        })),
-        payments: [],
-        project: {
-          id: payload.projectId,
-          name: payload.projectId === 'proj_1' ? 'Stephen Showcase Website' : 'Beta Brand Modernization',
-        },
-        client: {
-          id: payload.clientId,
-          name: payload.clientId === 'client_a' ? 'Alpha Client (Project 1)' : 'Beta Client (Project 2)',
-          email: `${payload.clientId}@example.com`,
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      inMemoryMockInvoices.unshift(newInvoice);
-      return newInvoice;
-    }
-    return await res.json();
-  } catch (err: any) {
-    const subtotalNum = payload.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-    const taxRateNum = payload.taxRate || 0;
-    const taxAmountNum = (subtotalNum * taxRateNum) / 100;
-    const totalAmountNum = subtotalNum + taxAmountNum;
-
-    const newInvoice: InvoiceRecord = {
-      id: `inv_mock_${Date.now()}`,
-      invoiceNumber: null,
-      projectId: payload.projectId,
-      clientId: payload.clientId,
-      status: 'DRAFT',
-      currency: payload.currency || 'USD',
-      subtotal: subtotalNum.toFixed(2),
-      taxRate: taxRateNum.toFixed(2),
-      taxAmount: taxAmountNum.toFixed(2),
-      totalAmount: totalAmountNum.toFixed(2),
-      amountPaid: '0.00',
-      dueDate: payload.dueDate,
-      issuedAt: null,
-      paidAt: null,
-      notes: payload.notes || null,
-      items: payload.items.map((it, idx) => ({
-        id: `it_${Date.now()}_${idx}`,
-        description: it.description,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice.toFixed(2),
-        amount: (it.quantity * it.unitPrice).toFixed(2),
-        orderIndex: idx,
-      })),
-      payments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    inMemoryMockInvoices.unshift(newInvoice);
-    return newInvoice;
+  const res = await fetch(`${API_BASE_URL}/api/admin/invoices`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || `Failed to create invoice (${res.status})`);
   }
+  return res.json();
 }
 
 export async function issueInvoice(invoiceId: string, notes?: string): Promise<InvoiceRecord> {

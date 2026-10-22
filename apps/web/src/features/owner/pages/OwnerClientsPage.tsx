@@ -1,19 +1,79 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { UserPlus, Check, X } from 'lucide-react';
+import { Check, X, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../../../services/api-client';
+import { getAuthHeaders } from '../../../services/projects-api';
+
+interface PendingUser {
+  id: string;
+  name: string;
+  email: string;
+  date?: string;
+  status: string;
+}
 
 export const OwnerClientsPage: React.FC = () => {
-  const pendingApprovals = [
-    {
-      id: 'usr_new_1',
-      name: 'David Adeleke',
-      email: 'david@enterprise.com',
-      date: 'Oct 18, 2026',
-      status: 'PENDING_APPROVAL',
-    },
-  ];
+  const [pendingApprovals, setPendingApprovals] = useState<PendingUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const loadPending = async () => {
+    setLoading(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/pending`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingApprovals(Array.isArray(data) ? data : []);
+      } else {
+        setPendingApprovals([]);
+      }
+    } catch {
+      setPendingApprovals([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPending();
+  }, []);
+
+  const handleActivate = async (userId: string, email: string) => {
+    try {
+      setActionError(null);
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/activate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error(`Activation failed: ${res.status}`);
+      setActionNotice(`Account ${email} activated successfully.`);
+      loadPending();
+    } catch (err: any) {
+      setActionError(err.message || 'Activation failed.');
+    }
+  };
+
+  const handleReject = async (userId: string, email: string) => {
+    if (!window.confirm(`Reject registration for ${email}?`)) return;
+    try {
+      setActionError(null);
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/reject`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error(`Rejection failed: ${res.status}`);
+      setActionNotice(`Registration for ${email} rejected.`);
+      loadPending();
+    } catch (err: any) {
+      setActionError(err.message || 'Rejection failed.');
+    }
+  };
 
   return (
     <div className="space-y-6 text-left">
@@ -26,10 +86,31 @@ export const OwnerClientsPage: React.FC = () => {
             Authorize new public signups and send verified access tokens to client contacts.
           </p>
         </div>
-        <Button variant="primary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />}>
-          Send Client Invite
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadPending}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {actionNotice && (
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{actionNotice}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {/* Pending Approvals Table */}
       <Card>
@@ -39,35 +120,60 @@ export const OwnerClientsPage: React.FC = () => {
               <CardTitle>Registration Approval Queue</CardTitle>
               <CardDescription>Accounts waiting for Owner activation</CardDescription>
             </div>
-            <Badge variant="warning" size="sm" dot>1 Pending</Badge>
+            <Badge variant={pendingApprovals.length > 0 ? 'warning' : 'neutral'} size="sm" dot={pendingApprovals.length > 0}>
+              {pendingApprovals.length} Pending
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {pendingApprovals.map((user) => (
-              <div
-                key={user.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] gap-4"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-[var(--text)]">{user.name}</span>
-                    <Badge variant="warning" size="sm">Pending Owner Review</Badge>
+          {loading ? (
+            <p className="text-sm text-[var(--muted-text)] py-4 text-center">Checking approval queue...</p>
+          ) : pendingApprovals.length === 0 ? (
+            <div className="py-8 text-center border border-dashed border-[var(--border)] rounded-xl">
+              <p className="text-sm font-medium text-[var(--text)]">No client registrations pending approval</p>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                New signups requiring authorization will appear here for review.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingApprovals.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-[var(--text)]">{user.name || user.email}</span>
+                      <Badge variant="warning" size="sm">Pending Owner Review</Badge>
+                    </div>
+                    <p className="text-xs text-[var(--muted-text)] mt-0.5">
+                      {user.email} {user.date ? `• Registered ${user.date}` : ''}
+                    </p>
                   </div>
-                  <p className="text-xs text-[var(--muted-text)] mt-0.5">{user.email} • Registered {user.date}</p>
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="sm" leftIcon={<X className="w-4 h-4 text-[var(--danger-text)]" />}>
-                    Reject
-                  </Button>
-                  <Button variant="primary" size="sm" leftIcon={<Check className="w-4 h-4" />}>
-                    Activate Account
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleReject(user.id, user.email)}
+                      leftIcon={<X className="w-4 h-4 text-[var(--danger-text)]" />}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleActivate(user.id, user.email)}
+                      leftIcon={<Check className="w-4 h-4" />}
+                    >
+                      Activate Account
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

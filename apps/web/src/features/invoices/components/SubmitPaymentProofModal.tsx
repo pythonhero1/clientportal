@@ -99,7 +99,6 @@ export const SubmitPaymentProofModal: React.FC<SubmitPaymentProofModalProps> = (
                 required
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="e.g. WIRE-20261019-9942 or Swift Ref"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>
@@ -112,7 +111,6 @@ export const SubmitPaymentProofModal: React.FC<SubmitPaymentProofModalProps> = (
                 rows={3}
                 value={evidenceNote}
                 onChange={(e) => setEvidenceNote(e.target.value)}
-                placeholder="e.g. Sent from Chase Business Account ending in 4022"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)] resize-none"
               />
             </div>

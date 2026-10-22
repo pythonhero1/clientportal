@@ -123,7 +123,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               type="text"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. TXN-WIRE-992211"
               className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
             />
           </div>
@@ -136,7 +135,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               type="text"
               value={evidenceNote}
               onChange={(e) => setEvidenceNote(e.target.value)}
-              placeholder="e.g. Verified credited in corporate account"
               className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
             />
           </div>

@@ -17,7 +17,7 @@ export const AssignMeetingProjectModal: React.FC<AssignMeetingProjectModalProps>
   onOpenChange,
   onSave,
 }) => {
-  const [projectId, setProjectId] = useState<string>(meeting?.projectId || 'proj_1');
+  const [projectId, setProjectId] = useState<string>(meeting?.projectId || '');
   const [description, setDescription] = useState<string>(meeting?.description || '');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -52,7 +52,6 @@ export const AssignMeetingProjectModal: React.FC<AssignMeetingProjectModalProps>
           <Input
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            placeholder="e.g. proj_1"
             required
           />
         </div>

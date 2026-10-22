@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -20,6 +20,16 @@ class CreateInvitationDto {
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  @Get('users/pending')
+  async getPendingUsers() {
+    return this.usersService.getPendingUsers();
+  }
+
+  @Get('users/clients')
+  async getClients() {
+    return this.usersService.getClients();
+  }
+
   @Post('users/:userId/activate')
   @HttpCode(HttpStatus.OK)
   async activateUser(
@@ -27,6 +37,15 @@ export class UsersController {
     @CurrentUser() actor: AuthenticatedUser,
   ) {
     return this.usersService.activateUser(userId, actor.id);
+  }
+
+  @Post('users/:userId/reject')
+  @HttpCode(HttpStatus.OK)
+  async rejectUser(
+    @Param('userId') userId: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.rejectUser(userId, actor.id);
   }
 
   @Post('invitations')

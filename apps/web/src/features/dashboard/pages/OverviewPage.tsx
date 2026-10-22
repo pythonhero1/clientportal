@@ -17,16 +17,18 @@ export const OverviewPage: React.FC = () => {
         setOverview(data);
       })
       .catch((err) => {
-        console.warn('Overview fetch fallback:', err);
+        console.warn('Overview fetch error:', err);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  if (!loading && overview && !overview.hasActiveProject) {
+  if (!loading && (!overview || !overview.hasActiveProject || !overview.activeProject)) {
     return <NoActiveProjectPage />;
   }
 
   const project = overview?.activeProject;
+  const milestones = project?.milestones || overview?.milestones || [];
+  const documents = project?.documents || overview?.documents || [];
 
   return (
     <div className="space-y-6 text-left">
@@ -64,10 +66,12 @@ export const OverviewPage: React.FC = () => {
             <FolderGit2 className="w-4 h-4 text-[var(--primary)]" />
           </div>
           <p className="text-2xl font-bold text-[var(--text)] truncate">
-            {project?.name || 'Portal Implementation'}
+            {project?.name || 'Project Workspace'}
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <Badge variant="success" size="sm" dot>In Progress</Badge>
+            <Badge variant="success" size="sm" dot>
+              {project?.status || 'Active'}
+            </Badge>
             <span className="text-xs text-[var(--muted-text)]">Active Engagement</span>
           </div>
         </Card>
@@ -80,10 +84,12 @@ export const OverviewPage: React.FC = () => {
             <FileText className="w-4 h-4 text-[var(--warning-text)]" />
           </div>
           <p className="text-2xl font-bold text-[var(--text)]">
-            {overview?.stats?.deliverablesNeedingReview ?? 1}
+            {overview?.stats?.deliverablesNeedingReview ?? 0}
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <Badge variant="warning" size="sm" dot>Action Required</Badge>
+            <Badge variant={overview?.stats?.deliverablesNeedingReview ? 'warning' : 'neutral'} size="sm" dot={Boolean(overview?.stats?.deliverablesNeedingReview)}>
+              {overview?.stats?.deliverablesNeedingReview ? 'Action Required' : 'Up to Date'}
+            </Badge>
             <span className="text-xs text-[var(--muted-text)]">Files & Feedback</span>
           </div>
         </Card>
@@ -96,10 +102,12 @@ export const OverviewPage: React.FC = () => {
             <ArrowUpRight className="w-4 h-4 text-[var(--primary-link)]" />
           </div>
           <p className="text-2xl font-bold text-[var(--text)]">
-            {project?.websites?.length || 1} Live Staging
+            {project?.websites?.length || 0} Environments
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <Badge variant="neutral" size="sm">Active Preview</Badge>
+            <Badge variant="neutral" size="sm">
+              {project?.websites?.length ? 'Active Preview' : 'Pending Staging'}
+            </Badge>
           </div>
         </Card>
 
@@ -111,11 +119,12 @@ export const OverviewPage: React.FC = () => {
             <CheckCircle2 className="w-4 h-4 text-[var(--success-text)]" />
           </div>
           <p className="text-2xl font-bold text-[var(--text)]">
-            {overview?.stats?.onboardingStepsCompleted ?? 4} / 6
+            {overview?.stats?.onboardingStepsCompleted ?? 0} / 6
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <Badge variant="success" size="sm">Step 4 Active</Badge>
-            <span className="text-xs text-[var(--muted-text)]">Questionnaire Saved</span>
+            <Badge variant="neutral" size="sm">
+              {overview?.stats?.onboardingStepsCompleted ? 'In Progress' : 'Not Started'}
+            </Badge>
           </div>
         </Card>
       </div>
@@ -129,38 +138,50 @@ export const OverviewPage: React.FC = () => {
               <CardDescription>Track key milestones and approve submitted assets</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)]">
-                <CheckCircle2 className="w-5 h-5 text-[var(--success-text)] shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[var(--text)]">1. Onboarding & Requirements</span>
-                    <Badge variant="success" size="sm">Completed</Badge>
-                  </div>
-                  <p className="text-xs text-[var(--muted-text)] mt-0.5">Brief approved, Drive assets linked, kickoff completed.</p>
+              {milestones.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-[var(--border)] rounded-xl">
+                  <p className="text-xs text-[var(--muted-text)]">
+                    No delivery milestones have been configured for this project yet.
+                  </p>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)]">
-                <Clock className="w-5 h-5 text-[var(--primary)] shrink-0 mt-0.5 animate-pulse" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[var(--text)]">2. Design Systems & Responsive Wireframes</span>
-                    <Badge variant="warning" size="sm" dot>Review Ready</Badge>
+              ) : (
+                milestones.map((ms: any, idx: number) => (
+                  <div
+                    key={ms.id || idx}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)]"
+                  >
+                    {ms.status === 'APPROVED' ? (
+                      <CheckCircle2 className="w-5 h-5 text-[var(--success-text)] shrink-0 mt-0.5" />
+                    ) : ms.status === 'AWAITING_REVIEW' || ms.status === 'IN_PROGRESS' ? (
+                      <Clock className="w-5 h-5 text-[var(--primary)] shrink-0 mt-0.5 animate-pulse" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-[var(--border)] shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[var(--text)]">
+                          {idx + 1}. {ms.title}
+                        </span>
+                        <Badge
+                          variant={
+                            ms.status === 'APPROVED'
+                              ? 'success'
+                              : ms.status === 'AWAITING_REVIEW'
+                              ? 'warning'
+                              : 'neutral'
+                          }
+                          size="sm"
+                        >
+                          {ms.status}
+                        </Badge>
+                      </div>
+                      {ms.description && (
+                        <p className="text-xs text-[var(--muted-text)] mt-0.5">{ms.description}</p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-[var(--muted-text)] mt-0.5">Figma screens v2.1 uploaded. Feedback awaiting approval.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)] opacity-60">
-                <div className="w-5 h-5 rounded-full border-2 border-[var(--border)] shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[var(--text)]">3. Full-Stack Portal Implementation</span>
-                    <Badge variant="neutral" size="sm">Upcoming</Badge>
-                  </div>
-                  <p className="text-xs text-[var(--muted-text)] mt-0.5">Scheduled after wireframe acceptance.</p>
-                </div>
-              </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -169,34 +190,30 @@ export const OverviewPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Quick Links & Drive Docs</CardTitle>
-              <CardDescription>Authorized Google Drive materials</CardDescription>
+              <CardDescription>Authorized project materials</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <a
-                href="https://drive.google.com"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)] hover:bg-[var(--inset-surface)] transition-colors group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <FileText className="w-4 h-4 text-[var(--primary-link)]" />
-                  <span className="text-sm font-medium text-[var(--text)]">Brand Guidelines Drive</span>
+              {documents.length > 0 ? (
+                documents.map((doc: any) => (
+                  <a
+                    key={doc.id}
+                    href={doc.driveUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)] hover:bg-[var(--inset-surface)] transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <FileText className="w-4 h-4 text-[var(--primary-link)]" />
+                      <span className="text-sm font-medium text-[var(--text)]">{doc.title}</span>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-[var(--muted-text)] group-hover:text-[var(--text)]" />
+                  </a>
+                ))
+              ) : (
+                <div className="p-4 text-center border border-dashed border-[var(--border)] rounded-xl">
+                  <p className="text-xs text-[var(--muted-text)]">No Drive documents linked yet.</p>
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-[var(--muted-text)] group-hover:text-[var(--text)]" />
-              </a>
-
-              <a
-                href="https://drive.google.com"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)] hover:bg-[var(--inset-surface)] transition-colors group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <FileText className="w-4 h-4 text-[var(--primary-link)]" />
-                  <span className="text-sm font-medium text-[var(--text)]">Project Scope Contract</span>
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-[var(--muted-text)] group-hover:text-[var(--text)]" />
-              </a>
+              )}
 
               <Link
                 to="/onboarding/questionnaire"

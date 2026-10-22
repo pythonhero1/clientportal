@@ -121,10 +121,12 @@ export class MeetingsService {
           email: a.email,
           timeZone: a.timeZone,
         })) || [],
-      project: {
-        id: projectId,
-        name: 'Stephen Showcase Website',
-      },
+      project: projectId
+        ? {
+            id: projectId,
+            name: 'Client Project',
+          }
+        : undefined,
       client: {
         id: clientId,
         name: clientName,
@@ -274,25 +276,7 @@ export class MeetingsService {
         );
       }
 
-      return [
-        {
-          id: 'meet_1',
-          calBookingUid: 'cal_uid_1',
-          calBookingId: '849201',
-          projectId: 'proj_1',
-          clientId: user.id,
-          title: 'Wireframe Review & Architecture Walkthrough',
-          description: 'Strategy session with Stephen',
-          status: MeetingStatus.ACCEPTED,
-          startTime: new Date('2026-10-21T15:00:00.000Z'),
-          endTime: new Date('2026-10-21T15:30:00.000Z'),
-          timezone: 'Africa/Lagos',
-          project: {
-            id: 'proj_1',
-            name: 'Stephen Showcase Website',
-          },
-        },
-      ];
+      return [];
     }
 
     const memberships = await this.prisma.projectMembership.findMany({
@@ -367,24 +351,7 @@ export class MeetingsService {
         return filtered;
       }
 
-      return [
-        {
-          id: 'meet_1',
-          calBookingUid: 'cal_uid_1',
-          calBookingId: '849201',
-          projectId: 'proj_1',
-          clientId: 'client_a',
-          title: 'Wireframe Review & Architecture Walkthrough',
-          status: MeetingStatus.ACCEPTED,
-          startTime: new Date('2026-10-21T15:00:00.000Z'),
-          endTime: new Date('2026-10-21T15:30:00.000Z'),
-          timezone: 'Africa/Lagos',
-          project: { id: 'proj_1', name: 'Stephen Showcase Website' },
-          client: { id: 'client_a', name: 'Client A', email: 'client_a@example.com' },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
+      return [];
     }
 
     const where: any = {};

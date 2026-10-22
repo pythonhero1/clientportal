@@ -8,13 +8,15 @@ import { FileText, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { fetchProjectWorkspace } from '../../../services/projects-api';
 
 export const ProjectWorkspacePage: React.FC = () => {
-  const { projectId = 'prj_demo1' } = useParams<{ projectId: string }>();
+  const { projectId = '' } = useParams<{ projectId: string }>();
   const [workspace, setWorkspace] = useState<any>(null);
 
   useEffect(() => {
-    fetchProjectWorkspace(projectId)
-      .then((data) => setWorkspace(data))
-      .catch((err) => console.warn('Workspace fetch fallback:', err));
+    if (projectId) {
+      fetchProjectWorkspace(projectId)
+        .then((data) => setWorkspace(data))
+        .catch((err) => console.warn('Workspace fetch error:', err));
+    }
   }, [projectId]);
 
   const project = workspace?.project;
@@ -39,17 +41,21 @@ export const ProjectWorkspacePage: React.FC = () => {
             Milestone Progress
           </span>
           <p className="text-base font-bold text-[var(--text)]">
-            {milestones.length ? `${milestones.length} Milestones` : 'In Progress'}
+            {milestones.length ? `${milestones.length} Milestones` : 'No Milestones'}
           </p>
-          <span className="text-xs text-[var(--success-text)] font-medium">On Schedule</span>
+          <span className="text-xs text-[var(--muted-text)] font-medium">
+            {milestones.length ? 'In Progress' : 'Pending Schedule'}
+          </span>
         </Card>
 
         <Card>
           <span className="text-xs font-semibold text-[var(--muted-text)] uppercase tracking-wider block mb-1">
             Target Completion
           </span>
-          <p className="text-base font-bold text-[var(--text)]">Oct 31, 2026</p>
-          <span className="text-xs text-[var(--muted-text)]">Phase 1 Launch</span>
+          <p className="text-base font-bold text-[var(--text)]">
+            {project?.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'Target TBD'}
+          </p>
+          <span className="text-xs text-[var(--muted-text)]">Milestone Delivery</span>
         </Card>
       </div>
 
@@ -90,19 +96,16 @@ export const ProjectWorkspacePage: React.FC = () => {
 
   const deliverablesTab = (
     <div className="space-y-4 text-left">
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-base font-bold text-[var(--text)]">v2.1 Wireframes & Component Specs</h4>
-            <p className="text-xs text-[var(--muted-text)]">Uploaded Oct 18, 2026 • 24.5 MB</p>
-          </div>
+      <div className="p-6 text-center border border-dashed border-[var(--border)] rounded-xl">
+        <p className="text-xs text-[var(--muted-text)]">No deliverables submitted for review yet.</p>
+        <div className="mt-3">
           <Link to="/files">
             <Button variant="outline" size="sm">
-              Review File & Feedback
+              Open Files & Feedback
             </Button>
           </Link>
         </div>
-      </Card>
+      </div>
     </div>
   );
 
@@ -117,7 +120,7 @@ export const ProjectWorkspacePage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-              {project?.name || 'E-Commerce Redesign'}
+              {project?.name || 'Project Workspace'}
             </h1>
             <Badge variant="success" size="sm">{project?.status || 'Active'}</Badge>
           </div>
@@ -128,7 +131,7 @@ export const ProjectWorkspacePage: React.FC = () => {
       <Tabs
         items={[
           { id: 'overview', label: 'Overview', content: overviewTab },
-          { id: 'deliverables', label: 'Deliverables', badge: 1, content: deliverablesTab },
+          { id: 'deliverables', label: 'Deliverables', content: deliverablesTab },
         ]}
       />
     </div>

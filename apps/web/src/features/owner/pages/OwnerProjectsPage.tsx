@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchOwnerProjects, createOwnerProject } from '../../../services/projects-api';
+import { fetchOwnerProjects, createOwnerProject, getAuthHeaders } from '../../../services/projects-api';
+import { API_BASE_URL } from '../../../services/api-client';
 import {
   FolderGit2,
   Plus,
@@ -10,11 +11,12 @@ import {
 
 export const OwnerProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [clientId, setClientId] = useState('client_a');
+  const [clientId, setClientId] = useState('');
   const [stagingUrl, setStagingUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,10 +24,20 @@ export const OwnerProjectsPage: React.FC = () => {
     setLoading(true);
     fetchOwnerProjects()
       .then((res) => {
-        setProjects(res);
+        setProjects(Array.isArray(res) ? res : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch(`${API_BASE_URL}/api/admin/users/clients`, { headers: getAuthHeaders() })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setClients(data);
+          setClientId((prev) => prev || data[0].id);
+        }
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -125,16 +137,16 @@ export const OwnerProjectsPage: React.FC = () => {
                           </td>
                           <td style={tdStyle}>
                             <span style={{ color: 'var(--text)', fontSize: '13px' }}>
-                              {clientMember?.name || (p.id === 'proj_1' ? 'Alpha Client' : 'Beta Client')}
+                              {clientMember?.name || clientMember?.email || 'Unassigned'}
                             </span>
                             <span style={{ display: 'block', fontSize: '11px', color: 'var(--muted-text)' }}>
-                              {clientMember?.email || `${p.id}@example.com`}
+                              {clientMember?.email || 'No email attached'}
                             </span>
                           </td>
                           <td style={tdStyle}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
                               <Globe size={13} color="var(--primary-link)" />
-                              <span>{p.websites?.length || (p.id === 'proj_1' ? 2 : 1)} linked</span>
+                              <span>{p.websites?.length || 0} linked</span>
                             </div>
                           </td>
                           <td style={tdStyle}>
@@ -174,7 +186,6 @@ export const OwnerProjectsPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Stephen Showcase Website"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   style={inputStyle}
@@ -185,7 +196,6 @@ export const OwnerProjectsPage: React.FC = () => {
                 <label style={labelStyle}>Description / Engagement Scope</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Custom headless digital storefront with responsive dark and light themes."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   style={textareaStyle}
@@ -193,15 +203,19 @@ export const OwnerProjectsPage: React.FC = () => {
               </div>
 
               <div style={fieldStyle}>
-                <label style={labelStyle}>Assign Client Persona *</label>
+                <label style={labelStyle}>Assign Client *</label>
                 <select
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                   style={selectStyle}
+                  required
                 >
-                  <option value="client_a">Client A (client_a@example.com - Alpha Client)</option>
-                  <option value="client_b">Client B (client_b@example.com - Beta Client)</option>
-                  <option value="client_c">Client C (client_c@example.com - Gamma Client)</option>
+                  <option value="">-- Select Client --</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name ? `${c.name} (${c.email})` : c.email}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -209,7 +223,6 @@ export const OwnerProjectsPage: React.FC = () => {
                 <label style={labelStyle}>Initial Staging Website URL (Optional)</label>
                 <input
                   type="url"
-                  placeholder="https://staging.example.com"
                   value={stagingUrl}
                   onChange={(e) => setStagingUrl(e.target.value)}
                   style={inputStyle}

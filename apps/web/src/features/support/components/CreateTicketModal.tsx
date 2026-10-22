@@ -92,7 +92,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               label="Subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="e.g. Question on Figma asset export formats"
               required
             />
 

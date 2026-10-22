@@ -14,50 +14,6 @@ export class ProjectsService {
 
   async getProjectsForUser(user: AuthenticatedUser) {
     if (!process.env.DATABASE_URL) {
-      if (user.role === 'Owner') {
-        return [
-          {
-            id: 'proj_1',
-            name: 'Stephen Showcase Website',
-            description: 'Custom headless architecture with responsive dark/light themes.',
-            status: 'ACTIVE',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 'proj_2',
-            name: 'Alpha Client Brand Redesign',
-            description: 'Comprehensive brand asset overhaul and e-commerce launch.',
-            status: 'ONBOARDING',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-      }
-      if (user.id === 'client_a') {
-        return [
-          {
-            id: 'proj_1',
-            name: 'Stephen Showcase Website',
-            description: 'Custom headless architecture with responsive dark/light themes.',
-            status: 'ACTIVE',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-      }
-      if (user.id === 'client_b') {
-        return [
-          {
-            id: 'proj_2',
-            name: 'Alpha Client Brand Redesign',
-            description: 'Comprehensive brand asset overhaul and e-commerce launch.',
-            status: 'ONBOARDING',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-      }
       return [];
     }
 
@@ -90,36 +46,6 @@ export class ProjectsService {
 
   async getProjectById(projectId: string, user: AuthenticatedUser) {
     if (!process.env.DATABASE_URL) {
-      if (user.role === 'Owner') {
-        return {
-          id: projectId,
-          name: projectId === 'proj_1' ? 'Stephen Showcase Website' : `Project ${projectId}`,
-          description: 'Client engagement overview and deliverable timeline.',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      if (user.id === 'client_a' && projectId === 'proj_1') {
-        return {
-          id: 'proj_1',
-          name: 'Stephen Showcase Website',
-          description: 'Custom headless architecture with responsive dark/light themes.',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      if (user.id === 'client_b' && projectId === 'proj_2') {
-        return {
-          id: 'proj_2',
-          name: 'Alpha Client Brand Redesign',
-          description: 'Comprehensive brand asset overhaul and e-commerce launch.',
-          status: 'ONBOARDING',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-      }
       throw new NotFoundException('Project not found.');
     }
 
@@ -228,24 +154,10 @@ export class ProjectsService {
           description: project.description,
           status: project.status,
         },
-        websites: [
-          { id: 'w1', name: 'Staging Environment', url: 'https://staging.example.com', environment: 'STAGING', status: 'LIVE' },
-          { id: 'w2', name: 'Production Site', url: 'https://example.com', environment: 'PRODUCTION', status: 'DRAFT' },
-        ],
-        milestones: [
-          { id: 'm1', title: 'Kickoff & Discovery', status: 'APPROVED', orderIndex: 0 },
-          { id: 'm2', title: 'Design System & Shell', status: 'AWAITING_REVIEW', orderIndex: 1 },
-          { id: 'm3', title: 'Feature Development', status: 'PLANNED', orderIndex: 2 },
-        ],
-        documents: [
-          {
-            id: 'd1',
-            title: 'Project Creative Brief & Specifications',
-            driveUrl: 'https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
-            category: 'BRIEF',
-          },
-        ],
-        isDesignatedApprover: user.role === 'Owner' || user.id === 'client_a',
+        websites: [],
+        milestones: [],
+        documents: [],
+        isDesignatedApprover: user.role === 'Owner',
       };
     }
 

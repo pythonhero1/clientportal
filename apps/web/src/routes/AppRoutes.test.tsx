@@ -76,8 +76,8 @@ describe('AppRoutes Integration Suite (All 18 Screens & Owner Views)', () => {
     });
 
     it('renders /projects/:projectId (Screen 09 Project Workspace)', () => {
-      renderWithRouter('/projects/prj_demo1');
-      expect(screen.getAllByText('E-Commerce Redesign')[0]).toBeInTheDocument();
+      renderWithRouter('/projects/prj_1');
+      expect(screen.getAllByText('Project Workspace')[0]).toBeInTheDocument();
     });
 
     it('renders /files (Screen 10 Files & Feedback)', () => {

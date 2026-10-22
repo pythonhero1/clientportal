@@ -18,12 +18,16 @@ export function useInvoices() {
         setProjects(projs);
         setSelectedProjectId((prev) => prev || projs[0].id);
       } else {
-        setProjects([{ id: 'proj_default', name: 'Active Project' }]);
-        setSelectedProjectId('proj_default');
+        setProjects([]);
+        setSelectedProjectId('');
+        setInvoices([]);
+        setLoading(false);
       }
     } catch {
-      setProjects([{ id: 'proj_default', name: 'Active Project' }]);
-      setSelectedProjectId('proj_default');
+      setProjects([]);
+      setSelectedProjectId('');
+      setInvoices([]);
+      setLoading(false);
     }
   }, []);
 

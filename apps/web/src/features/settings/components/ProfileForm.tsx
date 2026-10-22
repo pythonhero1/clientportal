@@ -91,7 +91,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               label="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Stephen Oderinde"
               required
             />
 
@@ -106,14 +105,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               label="Company Name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. Acme Studio"
             />
 
             <Input
               label="Phone Number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +234 800 000 0000"
             />
 
             <div className="sm:col-span-2">

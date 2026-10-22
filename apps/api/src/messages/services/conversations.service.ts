@@ -283,46 +283,6 @@ export class ConversationsService {
   }
 
   private getMockConversations(user: AuthenticatedUser) {
-    return [
-      {
-        id: 'conv_1',
-        type: ConversationType.PROJECT,
-        title: 'Showcase Deliverables Discussion',
-        projectId: 'proj_1',
-        project: { id: 'proj_1', name: 'Stephen Showcase Website' },
-        createdById: 'owner_1',
-        lastMessageAt: new Date().toISOString(),
-        memberships: [
-          {
-            id: 'mem_1',
-            conversationId: 'conv_1',
-            userId: user.id,
-            role: ConversationMemberRole.Member,
-            joinedAt: new Date(Date.now() - 86400000).toISOString(),
-            leftAt: null,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role },
-          },
-          {
-            id: 'mem_2',
-            conversationId: 'conv_1',
-            userId: 'owner_1',
-            role: ConversationMemberRole.Owner,
-            joinedAt: new Date(Date.now() - 86400000).toISOString(),
-            leftAt: null,
-            user: { id: 'owner_1', name: 'Stephen Oderinde', email: 'stephen@example.com', role: 'Owner' },
-          },
-        ],
-        messages: [
-          {
-            id: 'msg_1',
-            conversationId: 'conv_1',
-            senderId: 'owner_1',
-            content: 'Welcome! I have uploaded the updated v2.1 wireframes to the Files section.',
-            createdAt: new Date().toISOString(),
-            sender: { id: 'owner_1', name: 'Stephen Oderinde', role: 'Owner' },
-          },
-        ],
-      },
-    ];
+    return [];
   }
 }

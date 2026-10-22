@@ -8,13 +8,30 @@ import { fetchOnboarding } from '../../../services/projects-api';
 
 export const OnboardingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const projectId = searchParams.get('projectId') || 'prj_demo1';
+  const urlProjectId = searchParams.get('projectId');
+  const [projectId, setProjectId] = useState<string>(urlProjectId || '');
   const [onboardingData, setOnboardingData] = useState<any>(null);
 
   useEffect(() => {
-    fetchOnboarding(projectId)
-      .then((data) => setOnboardingData(data))
-      .catch((err) => console.warn('Onboarding fetch fallback:', err));
+    if (!urlProjectId) {
+      import('../../../services/projects-api').then(({ fetchProjects }) => {
+        fetchProjects()
+          .then((projs) => {
+            if (Array.isArray(projs) && projs.length > 0) {
+              setProjectId(projs[0].id);
+            }
+          })
+          .catch(() => {});
+      });
+    }
+  }, [urlProjectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      fetchOnboarding(projectId)
+        .then((data) => setOnboardingData(data))
+        .catch((err) => console.warn('Onboarding fetch error:', err));
+    }
   }, [projectId]);
 
   const defaultSteps = [

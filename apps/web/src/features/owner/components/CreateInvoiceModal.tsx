@@ -14,8 +14,8 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [projectId, setProjectId] = useState('proj_alpha');
-  const [clientId, setClientId] = useState('client_a');
+  const [projectId, setProjectId] = useState('');
+  const [clientId, setClientId] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
@@ -25,7 +25,7 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   const [taxRate, setTaxRate] = useState<number>(0);
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<Array<{ description: string; quantity: number; unitPrice: number }>>([
-    { description: 'Initial Milestone: System Architecture & Scope', quantity: 1, unitPrice: 1500 },
+    { description: '', quantity: 1, unitPrice: 0 },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +127,6 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 required
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                placeholder="e.g. proj_alpha"
                 className="w-full px-3 py-2 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>
@@ -139,7 +138,6 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 required
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                placeholder="e.g. client_a"
                 className="w-full px-3 py-2 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>
@@ -248,7 +246,6 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 min="0"
                 value={taxRate}
                 onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                placeholder="e.g. 7.5"
                 className="w-full px-3 py-2 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>
@@ -258,7 +255,6 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Sprint 1 Deliverables"
                 className="w-full px-3 py-2 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>

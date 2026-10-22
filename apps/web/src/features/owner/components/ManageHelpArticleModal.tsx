@@ -152,7 +152,6 @@ export const ManageHelpArticleModal: React.FC<ManageHelpArticleModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="e.g. How to Submit Feedback on Deliverables"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required

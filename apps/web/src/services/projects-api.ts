@@ -86,10 +86,7 @@ export async function fetchProjects() {
   });
   const ct = res.headers.get('content-type') || '';
   if (!res.ok || ct.includes('text/html')) {
-    return [
-      { id: 'proj_1', name: 'Brand & Portal Implementation (Client A)' },
-      { id: 'proj_2', name: 'Design System & Staging Workspace (Client B)' },
-    ];
+    return [];
   }
   return res.json();
 }

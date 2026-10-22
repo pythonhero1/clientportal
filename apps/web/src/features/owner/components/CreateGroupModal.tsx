@@ -83,7 +83,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Design & Development Sync"
             className="w-full bg-[var(--surface-raised)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
           />
         </div>

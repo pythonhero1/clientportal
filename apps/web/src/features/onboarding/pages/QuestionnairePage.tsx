@@ -8,26 +8,41 @@ import { fetchQuestionnaire, saveQuestionnaireDraft } from '../../../services/pr
 
 export const QuestionnairePage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const projectId = searchParams.get('projectId') || 'prj_demo1';
+  const urlProjectId = searchParams.get('projectId');
+  const [projectId, setProjectId] = useState<string>(urlProjectId || '');
 
-  const [companyName, setCompanyName] = useState('Acme Retail Co.');
-  const [targetAudience, setTargetAudience] = useState('Direct-to-consumer lifestyle and luxury accessories');
-  const [deliverables, setDeliverables] = useState(
-    'Modern responsive e-commerce storefront, Shopify or custom headless integration, customer portal for order tracking.'
-  );
+  const [companyName, setCompanyName] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [deliverables, setDeliverables] = useState('');
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchQuestionnaire(projectId)
-      .then((data) => {
-        if (data?.responses) {
-          if (data.responses.companyName) setCompanyName(data.responses.companyName);
-          if (data.responses.targetAudience) setTargetAudience(data.responses.targetAudience);
-          if (data.responses.deliverables) setDeliverables(data.responses.deliverables);
-        }
-      })
-      .catch((err) => console.warn('Questionnaire fetch fallback:', err));
+    if (!urlProjectId) {
+      import('../../../services/projects-api').then(({ fetchProjects }) => {
+        fetchProjects()
+          .then((projs) => {
+            if (Array.isArray(projs) && projs.length > 0) {
+              setProjectId(projs[0].id);
+            }
+          })
+          .catch(() => {});
+      });
+    }
+  }, [urlProjectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      fetchQuestionnaire(projectId)
+        .then((data) => {
+          if (data?.responses) {
+            if (data.responses.companyName) setCompanyName(data.responses.companyName);
+            if (data.responses.targetAudience) setTargetAudience(data.responses.targetAudience);
+            if (data.responses.deliverables) setDeliverables(data.responses.deliverables);
+          }
+        })
+        .catch((err) => console.warn('Questionnaire fetch error:', err));
+    }
   }, [projectId]);
 
   const handleSave = async (e: React.FormEvent) => {

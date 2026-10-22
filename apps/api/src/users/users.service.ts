@@ -263,6 +263,91 @@ export class UsersService {
     return { id: updatedUser.id, status: updatedUser.status };
   }
 
+  async getPendingUsers() {
+    if (!process.env.DATABASE_URL) {
+      return [];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { status: 'PENDING_APPROVAL' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        status: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      date: u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          })
+        : '',
+      status: u.status,
+    }));
+  }
+
+  async getClients() {
+    if (!process.env.DATABASE_URL) {
+      return [];
+    }
+
+    return this.prisma.user.findMany({
+      where: { role: 'Client' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async rejectUser(userId: string, actorId?: string) {
+    if (!process.env.DATABASE_URL) {
+      return { id: userId, status: 'SUSPENDED' };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: 'SUSPENDED' },
+    });
+
+    if (actorId) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'AccountRejected',
+          targetType: 'User',
+          targetId: userId,
+          metadata: {
+            previousStatus: user.status,
+            newStatus: 'SUSPENDED',
+          },
+        },
+      });
+    }
+
+    return { id: updatedUser.id, status: updatedUser.status };
+  }
+
   async createInvitation(
     data: {
       email: string;
