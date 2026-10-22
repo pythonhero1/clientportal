@@ -75,20 +75,62 @@ export class ClerkAuthGuard implements CanActivate {
                     data: { clerkUserId },
                   });
                   console.log(`[ClerkAuthGuard] Successfully linked Clerk user ${clerkUserId} to database user ${user.id} (${user.email})`);
-                } else if (primaryEmail.toLowerCase() === adminEmail) {
+                } else {
+                  // Auto-provision unlinked account (Admin if matching email, otherwise PENDING_APPROVAL Client)
+                  const isStephen = primaryEmail.toLowerCase() === adminEmail;
+                  const fullName = clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : null;
                   user = await this.prisma.user.create({
                     data: {
-                      email: adminEmail,
-                      name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : 'Oderinde Stephen',
-                      role: 'Owner',
-                      status: 'ACTIVE',
+                      email: primaryEmail.toLowerCase(),
+                      name: isStephen ? (fullName || 'Oderinde Stephen') : fullName,
+                      role: isStephen ? 'Owner' : 'Client',
+                      status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
                       clerkUserId,
-                      mfaEnforced: true,
+                      mfaEnforced: isStephen,
                       profile: {
                         create: { timezone: 'Africa/Lagos' },
                       },
                     },
                   });
+
+                  await this.prisma.auditLog.create({
+                    data: {
+                      actorId: user.id,
+                      action: 'ClientRegistered',
+                      targetType: 'User',
+                      targetId: user.id,
+                      metadata: {
+                        message: isStephen
+                          ? 'Admin account auto-provisioned'
+                          : 'New client self-registered awaiting Admin approval',
+                        clerkUserId,
+                        email: primaryEmail.toLowerCase(),
+                      },
+                    },
+                  });
+
+                  // If non-admin client, notify the Admin/Owner immediately
+                  if (!isStephen) {
+                    const owner = await this.prisma.user.findFirst({
+                      where: {
+                        OR: [{ role: 'Owner' }, { email: adminEmail }],
+                      },
+                    });
+
+                    if (owner) {
+                      await this.prisma.notification.create({
+                        data: {
+                          userId: owner.id,
+                          type: 'SYSTEM_ALERT',
+                          title: 'New Client Registration',
+                          message: `${user.name || user.email} has registered and is awaiting your approval.`,
+                          link: '/admin/clients',
+                          data: { userId: user.id, email: user.email },
+                        },
+                      }).catch(() => {});
+                    }
+                  }
+                  console.log(`[ClerkAuthGuard] Auto-provisioned user ${user.id} (${user.email}, ${user.role}, ${user.status})`);
                 }
               }
             } catch (linkErr: any) {

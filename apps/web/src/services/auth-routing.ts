@@ -67,6 +67,10 @@ export async function determineAuthenticatedRedirect(token?: string | null): Pro
   }
 
   if (user) {
+    if (user.status === 'PENDING_APPROVAL') {
+      return '/pending-approval';
+    }
+
     const isAdmin = isAdministrator(user);
     if (isAdmin) {
       return '/admin';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
-import { setAuthToken } from '../../../services/api-client';
+import { setAuthToken, API_BASE_URL } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
 import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
 
@@ -73,12 +73,23 @@ export const SignUpPage: React.FC = () => {
       const lastName = names.slice(1).join(' ') || undefined;
 
       try {
-        await clerk.client.signUp.create({
+        const signUpResult = await clerk.client.signUp.create({
           emailAddress: email.trim(),
           password: password,
           firstName,
           lastName,
         });
+
+        // Notify backend to create pending client and dispatch admin notification immediately
+        fetch(`${API_BASE_URL}/api/auth/register-client`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            name: fullName.trim(),
+            clerkUserId: signUpResult?.createdUserId || undefined,
+          }),
+        }).catch((err) => console.warn('[SignUpPage] register-client notify error:', err));
 
         await clerk.client.signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
         window.location.href = `/verify-email?email=${encodeURIComponent(email.trim())}`;

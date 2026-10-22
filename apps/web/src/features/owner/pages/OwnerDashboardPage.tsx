@@ -92,7 +92,7 @@ export const OwnerDashboardPage: React.FC = () => {
           <p className="text-2xl font-bold text-[var(--text)]">
             {loading ? '...' : `${pendingCount} ${pendingCount === 1 ? 'Registration' : 'Registrations'}`}
           </p>
-          <Link to="/owner/clients" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
+          <Link to="/admin/clients" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Review Queue <ArrowRight className="w-3 h-3" />
           </Link>
         </Card>
@@ -107,7 +107,7 @@ export const OwnerDashboardPage: React.FC = () => {
           <p className="text-2xl font-bold text-[var(--text)]">
             {loading ? '...' : `${projectsCount} ${projectsCount === 1 ? 'Project' : 'Projects'}`}
           </p>
-          <Link to="/owner/projects" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
+          <Link to="/admin/projects" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Manage Projects <ArrowRight className="w-3 h-3" />
           </Link>
         </Card>
@@ -122,7 +122,7 @@ export const OwnerDashboardPage: React.FC = () => {
           <p className="text-2xl font-bold text-[var(--text)]">
             {loading ? '...' : `${filesCount} ${filesCount === 1 ? 'Deliverable' : 'Deliverables'}`}
           </p>
-          <Link to="/owner/files" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
+          <Link to="/admin/files" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             View Files <ArrowRight className="w-3 h-3" />
           </Link>
         </Card>
@@ -137,7 +137,7 @@ export const OwnerDashboardPage: React.FC = () => {
           <p className="text-2xl font-bold text-[var(--text)]">
             {loading ? '...' : formatBilled(billedTotal)}
           </p>
-          <Link to="/owner/invoices" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
+          <Link to="/admin/invoices" className="text-xs text-[var(--primary-link)] hover:underline flex items-center gap-1 mt-2">
             Invoice Ledger <ArrowRight className="w-3 h-3" />
           </Link>
         </Card>
@@ -150,21 +150,21 @@ export const OwnerDashboardPage: React.FC = () => {
           <CardDescription>Direct shortcuts to privileged operations</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <Link to="/owner/clients">
+          <Link to="/admin/clients">
             <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] hover:border-[var(--primary)] transition-all">
               <h4 className="text-sm font-bold text-[var(--text)]">Invite New Client</h4>
               <p className="text-xs text-[var(--muted-text)] mt-1">Generate verified invitation token for client onboarding.</p>
             </div>
           </Link>
 
-          <Link to="/owner/projects">
+          <Link to="/admin/projects">
             <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] hover:border-[var(--primary)] transition-all">
               <h4 className="text-sm font-bold text-[var(--text)]">Create Project</h4>
               <p className="text-xs text-[var(--muted-text)] mt-1">Set up engagement, connect Drive materials, assign access.</p>
             </div>
           </Link>
 
-          <Link to="/owner/invoices">
+          <Link to="/admin/invoices">
             <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] hover:border-[var(--primary)] transition-all">
               <h4 className="text-sm font-bold text-[var(--text)]">Issue Milestone Invoice</h4>
               <p className="text-xs text-[var(--muted-text)] mt-1">Create PDF statement with unique number and itemized scope.</p>

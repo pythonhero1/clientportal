@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
+import { API_BASE_URL, setAuthToken } from '../../../services/api-client';
+import { loadClerk } from '../../../services/clerk-client';
 
 export const VerifyEmailPage: React.FC = () => {
   const [code, setCode] = useState('');
@@ -19,10 +21,16 @@ export const VerifyEmailPage: React.FC = () => {
     }
   }, [countdown]);
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     setCountdown(60);
     setError(null);
+    try {
+      const clerk = await loadClerk();
+      await clerk?.client?.signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
+    } catch (err: any) {
+      console.warn('[VerifyEmailPage] Resend code error:', err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +45,29 @@ export const VerifyEmailPage: React.FC = () => {
     setIsLoading(true);
 
     try {
+      try {
+        const clerk = await loadClerk();
+        if (clerk?.client?.signUp) {
+          const completeSignUp = await clerk.client.signUp.attemptEmailAddressVerification({ code: code.trim() });
+          if (completeSignUp?.status === 'complete' && completeSignUp.createdSessionId) {
+            await clerk.setActive({ session: completeSignUp.createdSessionId });
+            const token = await clerk.session?.getToken();
+            if (token) setAuthToken(token);
+          }
+        }
+      } catch (clerkErr: any) {
+        console.warn('[VerifyEmailPage] Clerk verification step:', clerkErr?.message);
+      }
+
+      // Notify backend to ensure user row exists and owner is notified
+      if (email && email !== 'your email address') {
+        await fetch(`${API_BASE_URL}/api/auth/register-client`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        }).catch(() => {});
+      }
+
       window.location.href = '/pending-approval';
     } catch {
       setError('Verification failed. The code may be incorrect or expired.');

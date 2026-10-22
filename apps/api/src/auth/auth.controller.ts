@@ -158,4 +158,101 @@ export class AuthController {
 
     return { status: 'ACTIVE', projectId: invitation.projectId };
   }
+
+  @Post('register-client')
+  @HttpCode(HttpStatus.OK)
+  async registerClient(@Body() body: { email: string; name?: string; clerkUserId?: string }) {
+    if (!body?.email) {
+      return { success: false, message: 'Email is required' };
+    }
+
+    const email = body.email.toLowerCase().trim();
+    const adminEmail = (
+      process.env.ADMIN_EMAIL ||
+      process.env.OWNER_EMAIL ||
+      'stephenoderinde@gmail.com'
+    ).toLowerCase();
+
+    if (!process.env.DATABASE_URL) {
+      return { success: true, status: 'PENDING_APPROVAL' };
+    }
+
+    const isStephen = email === adminEmail;
+    const name = body.name?.trim() || null;
+    const clerkUserId = body.clerkUserId || `clerk_${Date.now()}`;
+
+    // Find if user already exists
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(body.clerkUserId ? [{ clerkUserId: body.clerkUserId }] : []),
+          { email },
+        ],
+      },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          clerkUserId,
+          email,
+          name: isStephen ? (name || 'Oderinde Stephen') : name,
+          role: isStephen ? 'Owner' : 'Client',
+          status: isStephen ? 'ACTIVE' : 'PENDING_APPROVAL',
+          mfaEnforced: isStephen,
+          profile: {
+            create: { timezone: 'Africa/Lagos' },
+          },
+        },
+      });
+
+      await this.prisma.auditLog.create({
+        data: {
+          actorId: user.id,
+          action: 'ClientRegistered',
+          targetType: 'User',
+          targetId: user.id,
+          metadata: {
+            message: isStephen
+              ? 'Admin account created'
+              : 'New client registration awaiting Admin approval',
+            clerkUserId,
+            email,
+          },
+        },
+      });
+
+      if (!isStephen) {
+        const owner = await this.prisma.user.findFirst({
+          where: {
+            OR: [{ role: 'Owner' }, { email: adminEmail }],
+          },
+        });
+
+        if (owner) {
+          await this.prisma.notification.create({
+            data: {
+              userId: owner.id,
+              type: 'SYSTEM_ALERT',
+              title: 'New Client Registration',
+              message: `${user.name || user.email} has registered and is awaiting your approval.`,
+              link: '/admin/clients',
+              data: { userId: user.id, email: user.email },
+            },
+          }).catch(() => {});
+        }
+      }
+    } else if (body.clerkUserId && user.clerkUserId !== body.clerkUserId) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { clerkUserId: body.clerkUserId },
+      });
+    }
+
+    return {
+      success: true,
+      userId: user.id,
+      status: user.status,
+    };
+  }
 }

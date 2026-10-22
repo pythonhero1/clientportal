@@ -114,12 +114,20 @@ export class NotificationsService {
       return this.createNotification('owner_default', dto);
     }
 
+    const adminEmail = (
+      process.env.ADMIN_EMAIL ||
+      process.env.OWNER_EMAIL ||
+      'stephenoderinde@gmail.com'
+    ).toLowerCase();
+
     const owner = await this.prisma.user.findFirst({
-      where: { role: 'Owner' },
+      where: {
+        OR: [{ role: 'Owner' }, { email: adminEmail }],
+      },
     });
 
     if (!owner) {
-      this.logger.warn('No user with Owner role found to receive Owner alert.');
+      this.logger.warn('No user with Owner role or admin email found to receive Owner alert.');
       return null;
     }
 

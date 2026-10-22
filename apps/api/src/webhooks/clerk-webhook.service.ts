@@ -160,6 +160,27 @@ export class ClerkWebhookService {
               },
             },
           });
+
+          if (!isStephen) {
+            const owner = await this.prisma.user.findFirst({
+              where: {
+                OR: [{ role: 'Owner' }, { email: adminEmail }],
+              },
+            });
+
+            if (owner) {
+              await this.prisma.notification.create({
+                data: {
+                  userId: owner.id,
+                  type: 'SYSTEM_ALERT',
+                  title: 'New Client Registration',
+                  message: `${user.name || user.email} has registered and is awaiting your approval.`,
+                  link: '/admin/clients',
+                  data: { userId: user.id, email: user.email },
+                },
+              }).catch(() => {});
+            }
+          }
         }
         break;
       }
