@@ -1,7 +1,7 @@
 # Fix: Client Registration Sync, Admin Notifications, and Pending Approval Display
 
 - Task: fix-client-registration-sync-and-admin-notifications
-- Status: IMPLEMENTED - AWAITING STEPHEN CONFIRMATION
+- Status: COMPLETED
 - Created: 2026-10-22
 - Updated: 2026-10-22
 - Workspace: one portal repository
@@ -137,10 +137,7 @@ None.
 Checked memory files; active decisions `D-1`, `D-3`, `D-14`, `D-17` and pattern `P-1` cover this work. No new architectural decisions needed.
 
 ## 13 Stephen confirmation
-Specific checks against section 5 after deployment:
-1. Visit `portal.oderindestephen.com/admin/clients`: confirms the client account Stephen just created appears under "Pending Approvals" with "Activate" and "Reject" buttons.
-2. Check the Admin TopBar bell and `portal.oderindestephen.com/admin/notifications`: confirms the "New Client Registration" notification appears with unread badge.
-3. Click "Activate": confirms the account is activated.
+Confirmed by Stephen on 2026-10-22: "Yes it works now" with visual verification of the live Admin Console at `portal.oderindestephen.com/admin/clients` showing the Registration Approval Queue populated with pending clients (Mary and Semilore) and active "Activate Account" / "Reject" controls.
 
 ## 14 Integration and handoff
 Automated CI/CD deployment on Cloudflare Pages and Render upon push to `origin/main`.
