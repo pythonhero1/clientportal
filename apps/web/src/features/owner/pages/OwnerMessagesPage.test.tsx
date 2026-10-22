@@ -104,11 +104,11 @@ describe('OwnerMessagesPage', () => {
     );
   };
 
-  it('renders Owner Suite badge and messaging title', async () => {
+  it('renders Admin Suite badge and messaging title', async () => {
     renderComponent();
 
     expect(screen.getByText('Messages & Channel Management')).toBeInTheDocument();
-    expect(screen.getByText('Owner Suite')).toBeInTheDocument();
+    expect(screen.getByText('Admin Suite')).toBeInTheDocument();
   });
 
   it('opens Create Group Channel modal when clicking New Group', async () => {

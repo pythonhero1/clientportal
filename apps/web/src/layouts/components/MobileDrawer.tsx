@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 export interface MobileDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role?: 'Owner' | 'Client';
+  role?: 'Admin' | 'Owner' | 'Client';
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({

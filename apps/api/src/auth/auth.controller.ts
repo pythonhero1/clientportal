@@ -30,7 +30,7 @@ export class AuthController {
         clerkUserId: user.clerkUserId,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: user.role === 'Owner' || (user.role as string) === 'Admin' ? 'Admin' : 'Client',
         status: user.status,
         mfaEnforced: user.mfaEnforced,
         profile: {
@@ -66,7 +66,7 @@ export class AuthController {
       clerkUserId: dbUser.clerkUserId,
       email: dbUser.email,
       name: dbUser.name,
-      role: dbUser.role,
+      role: dbUser.role === 'Owner' || (dbUser.role as string) === 'Admin' ? 'Admin' : 'Client',
       status: dbUser.status,
       mfaEnforced: dbUser.mfaEnforced,
       profile: dbUser.profile

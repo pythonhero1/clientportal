@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn';
 
 export interface TopBarProps {
   onOpenMobileNav: () => void;
-  role?: 'Owner' | 'Client';
+  role?: 'Admin' | 'Owner' | 'Client';
   userName?: string;
   userEmail?: string;
 }
@@ -22,6 +22,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   const { resolvedTheme, toggleTheme } = useTheme();
   const { unreadCount } = useNotifications();
   const location = useLocation();
+  const isAdmin = role === 'Admin' || role === 'Owner';
 
   const getPageTitle = (pathname: string): string => {
     switch (pathname) {
@@ -49,18 +50,30 @@ export const TopBar: React.FC<TopBarProps> = ({
         return 'Help Center & Ticket Support';
       case '/no-project':
         return 'Overview (No Active Project)';
+      case '/admin':
       case '/owner':
-        return 'Owner Command Overview';
+        return 'Admin Command Overview';
+      case '/admin/clients':
       case '/owner/clients':
         return 'Client Approvals & Invitations';
+      case '/admin/projects':
       case '/owner/projects':
         return 'Project Creation & Assignment';
+      case '/admin/files':
       case '/owner/files':
         return 'File Review & 90-Day Lifecycle';
+      case '/admin/invoices':
       case '/owner/invoices':
         return 'Billing & Invoice Issuance';
+      case '/admin/support':
       case '/owner/support':
         return 'Client Ticket Support Queue';
+      case '/admin/meetings':
+      case '/owner/meetings':
+        return 'Meetings & Schedule';
+      case '/admin/notifications':
+      case '/owner/notifications':
+        return 'Admin Notification Center';
       default:
         if (pathname.startsWith('/projects/')) {
           return 'Project Workspace';
@@ -106,7 +119,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Notifications Bell */}
         <Link
-          to={role === 'Owner' ? '/owner/notifications' : '/notifications'}
+          to={isAdmin ? '/admin/notifications' : '/notifications'}
           className={cn(
             'relative p-2 rounded-lg text-[var(--muted-text)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)] transition-colors',
             'focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]'
@@ -121,7 +134,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* User Menu */}
         <div className="pl-1 md:pl-2 border-l border-[var(--border)]">
-          <UserMenu name={userName} email={userEmail} role={role} />
+          <UserMenu name={userName} email={userEmail} role={isAdmin ? 'Admin' : 'Client'} />
         </div>
       </div>
     </header>

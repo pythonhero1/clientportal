@@ -119,7 +119,7 @@ export const OwnerProjectDetailPage: React.FC = () => {
     return (
       <div style={pageContainerStyle}>
         <div style={{ padding: '6rem 1rem', textAlign: 'center', color: 'var(--muted-text)' }}>
-          Loading owner workspace detail...
+          Loading admin workspace detail...
         </div>
       </div>
     );
@@ -134,9 +134,9 @@ export const OwnerProjectDetailPage: React.FC = () => {
         <div style={contentInnerStyle}>
           {/* Breadcrumb */}
           <div style={breadcrumbRowStyle}>
-            <a href="/owner/projects" style={breadcrumbLinkStyle}>
+            <a href="/admin/projects" style={breadcrumbLinkStyle}>
               <ArrowLeft size={14} />
-              <span>Owner Workspace</span>
+              <span>Admin Workspace</span>
             </a>
             <span style={{ color: 'var(--muted-text)' }}>/</span>
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>{project.name}</span>

@@ -126,39 +126,39 @@ describe('AppRoutes Integration Suite (All 18 Screens & Owner Views)', () => {
     });
   });
 
-  describe('Owner Management Surfaces', () => {
-    it('renders /owner (Owner Overview)', () => {
-      renderWithRouter('/owner');
-      expect(screen.getAllByText('Owner Executive Suite')[0]).toBeInTheDocument();
+  describe('Admin Management Surfaces', () => {
+    it('renders /admin/login (Admin Dedicated Login)', () => {
+      renderWithRouter('/admin/login');
+      expect(screen.getAllByText('Admin Login')[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/clients (Client Approvals)', () => {
-      renderWithRouter('/owner/clients');
+    it('renders /admin/clients (Client Approvals)', () => {
+      renderWithRouter('/admin/clients');
       expect(screen.getAllByText('Client Approvals & Invitations')[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/projects (Project Assignment)', () => {
-      renderWithRouter('/owner/projects');
+    it('renders /admin/projects (Project Assignment)', () => {
+      renderWithRouter('/admin/projects');
       expect(screen.getAllByText('Project Creation & Assignment')[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/files (Deliverables Lifecycle)', () => {
-      renderWithRouter('/owner/files');
+    it('renders /admin/files (Deliverables Lifecycle)', () => {
+      renderWithRouter('/admin/files');
       expect(screen.getAllByText('Deliverables & Lifecycle Management')[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/invoices (Billing & Invoices)', () => {
-      renderWithRouter('/owner/invoices');
+    it('renders /admin/invoices (Billing & Invoices)', () => {
+      renderWithRouter('/admin/invoices');
       expect(screen.getAllByText('Billing & Invoice Issuance')[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/support (Support Queue)', () => {
-      renderWithRouter('/owner/support');
+    it('renders /admin/support (Support Queue)', () => {
+      renderWithRouter('/admin/support');
       expect(screen.getAllByText(/Client Support/i)[0]).toBeInTheDocument();
     });
 
-    it('renders /owner/meetings (Meetings & Schedule)', () => {
-      renderWithRouter('/owner/meetings');
+    it('renders /admin/meetings (Meetings & Schedule)', () => {
+      renderWithRouter('/admin/meetings');
       expect(screen.getAllByText('Meetings & Schedule')[0]).toBeInTheDocument();
     });
   });

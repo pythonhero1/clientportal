@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../../../layouts/AuthLayout';
 import { setAuthToken } from '../../../services/api-client';
 import { loadClerk } from '../../../services/clerk-client';
-import { determineAuthenticatedRedirect } from '../../../services/auth-routing';
+import { determineAuthenticatedRedirect, fetchAuthenticatedUser } from '../../../services/auth-routing';
 
 export const SignInPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -29,8 +29,13 @@ export const SignInPage: React.FC = () => {
         if (token) {
           setAuthToken(token);
         }
-        const redirectUrl = await determineAuthenticatedRedirect(token);
+        const { user } = await fetchAuthenticatedUser(token);
         if (isMounted) {
+          if (user && (user.role === 'Admin' || user.role === 'Owner')) {
+            window.location.href = '/admin';
+            return;
+          }
+          const redirectUrl = await determineAuthenticatedRedirect(token);
           window.location.href = redirectUrl;
         }
       })
@@ -48,6 +53,26 @@ export const SignInPage: React.FC = () => {
     const token = await clerk.session?.getToken();
     if (token) {
       setAuthToken(token);
+    }
+
+    // Role boundary validation: Administrator accounts cannot sign in through the client portal!
+    const { user, errorStatus, errorCode } = await fetchAuthenticatedUser(token);
+
+    if (user && (user.role === 'Admin' || user.role === 'Owner')) {
+      await clerk.signOut().catch(() => {});
+      setAuthToken(null);
+      setError('Access restricted: Administrator accounts cannot sign in through the Client portal. Please use the Admin login at portal.oderindestephen.com/admin.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (errorStatus === 403) {
+      if (errorCode === 'ACCOUNT_PENDING_APPROVAL') {
+        window.location.href = '/pending-approval';
+        return;
+      }
+      window.location.href = '/access-denied';
+      return;
     }
 
     const redirectUrl = await determineAuthenticatedRedirect(token);

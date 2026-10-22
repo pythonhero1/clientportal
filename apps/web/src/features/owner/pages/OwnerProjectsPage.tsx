@@ -79,7 +79,7 @@ export const OwnerProjectsPage: React.FC = () => {
             <div>
               <div style={badgeStyle}>
                 <ShieldCheck size={13} style={{ marginRight: '4px' }} />
-                <span>OWNER WORKSPACE MANAGEMENT</span>
+                <span>ADMIN WORKSPACE MANAGEMENT</span>
               </div>
               <h1 style={titleStyle}>Client Engagements & Projects</h1>
               <p style={subtitleStyle}>

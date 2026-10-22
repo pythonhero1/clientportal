@@ -23,7 +23,7 @@ import { cn } from '../../utils/cn';
 import { useNotifications } from '../../features/notifications/hooks/useNotifications';
 
 export interface SidebarProps {
-  role?: 'Owner' | 'Client';
+  role?: 'Admin' | 'Owner' | 'Client';
   compact?: boolean;
   onItemClick?: () => void;
   className?: string;
@@ -36,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className,
 }) => {
   const { unreadCount } = useNotifications();
+  const isAdmin = role === 'Admin' || role === 'Owner';
 
   const clientNav = [
     { to: '/overview', label: 'Dashboard Overview', icon: LayoutDashboard },
@@ -50,19 +51,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/support', label: 'Help & Tickets', icon: HelpCircle },
   ];
 
-  const ownerNav = [
-    { to: '/owner', label: 'Owner Overview', icon: ShieldAlert },
-    { to: '/owner/clients', label: 'Clients & Invitations', icon: Users, badge: 'Pending' },
-    { to: '/owner/projects', label: 'Projects & Assignment', icon: FolderKanban },
-    { to: '/owner/files', label: 'Deliverables & Lifecycle', icon: FileCheck2 },
-    { to: '/owner/messages', label: 'Messages & Channels', icon: MessageSquare },
-    { to: '/owner/invoices', label: 'Billing & Invoices', icon: CreditCard },
-    { to: '/owner/support', label: 'Support Queue', icon: LifeBuoy },
-    { to: '/owner/meetings', label: 'Meetings & Schedule', icon: Calendar },
-    { to: '/owner/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
+  const adminNav = [
+    { to: '/admin', label: 'Admin Overview', icon: ShieldAlert },
+    { to: '/admin/clients', label: 'Clients & Invitations', icon: Users, badge: 'Pending' },
+    { to: '/admin/projects', label: 'Projects & Assignment', icon: FolderKanban },
+    { to: '/admin/files', label: 'Deliverables & Lifecycle', icon: FileCheck2 },
+    { to: '/admin/messages', label: 'Messages & Channels', icon: MessageSquare },
+    { to: '/admin/invoices', label: 'Billing & Invoices', icon: CreditCard },
+    { to: '/admin/support', label: 'Support Queue', icon: LifeBuoy },
+    { to: '/admin/meetings', label: 'Meetings & Schedule', icon: Calendar },
+    { to: '/admin/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
   ];
 
-  const navItems = role === 'Owner' ? ownerNav : clientNav;
+  const navItems = isAdmin ? adminNav : clientNav;
 
   return (
     <aside
@@ -86,10 +87,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[0.625rem] font-semibold tracking-wider text-[var(--accent-cyan)] uppercase">
-                {role === 'Owner' ? 'OWNER SUITE' : 'CLIENT PORTAL'}
+                {isAdmin ? 'ADMIN SUITE' : 'CLIENT PORTAL'}
               </span>
-              <Badge variant={role === 'Owner' ? 'accent' : 'neutral'} size="sm">
-                {role}
+              <Badge variant={isAdmin ? 'accent' : 'neutral'} size="sm">
+                {isAdmin ? 'Admin' : 'Client'}
               </Badge>
             </div>
           </div>

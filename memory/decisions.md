@@ -39,7 +39,7 @@ Only actual approved decisions and explicitly delegated selections belong here. 
 - Source: Current answer 2: first release all 18 screens, only owner and client.
 - Rejected: Specific alternative reasoning was not recorded here; do not invent it.
 - Applies to: Current release; overrides the earlier role set.
-- Status: active
+- Status: superseded by D-17
 - Date: 2026-10-18
 
 ### D-6 - Application file version history
@@ -129,6 +129,15 @@ Only actual approved decisions and explicitly delegated selections belong here. 
 - Applies to: Production hosting and deployment topology.
 - Status: active
 - Date: 2026-10-21
+
+### D-17 - Admin role naming and isolated login boundary
+- Decision: Rename privileged role from Owner to Admin; host dedicated Admin login at /admin with no signup page; enforce strict credential isolation where Admin credentials cannot sign in to the Client portal and Client credentials cannot sign in to the Admin console.
+- Source: Stephen's explicit instruction on 2026-10-22 to change owner to Admin, route admin login through portal.oderindestephen.com/admin, reject admin details on client login and client details on admin login, and omit signup page on admin.
+- Rejected: Shared login endpoints; allowing cross-role login between client and admin; public signup page for admin.
+- Applies to: Identity, authentication, routing, and access control.
+- Status: active
+- Date: 2026-10-22
+
 
 
 

@@ -7,15 +7,17 @@ import { getAuthToken, API_BASE_URL } from '../services/api-client';
 import { loadClerk } from '../services/clerk-client';
 
 export interface AppShellProps {
-  role?: 'Owner' | 'Client';
+  role?: 'Admin' | 'Owner' | 'Client';
   userName?: string;
   userEmail?: string;
+  children?: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
   role = 'Client',
   userName = 'Stephen Oderinde',
   userEmail = 'stephenoderinde@gmail.com',
+  children,
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState({ name: userName, email: userEmail });
@@ -29,7 +31,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
           const token = getAuthToken();
           if (clerk && clerk.loaded && !clerk.user && !token) {
-            navigate('/sign-in', { replace: true });
+            const isTargetAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+            navigate(isTargetAdmin ? '/admin' : '/sign-in', { replace: true });
             return;
           }
         }
@@ -62,10 +65,13 @@ export const AppShell: React.FC<AppShellProps> = ({
             })
             .then((me) => {
               if (me?.role) {
-                if (me.role === 'Client' && location.pathname.startsWith('/owner')) {
+                const isUserAdmin = me.role === 'Admin' || me.role === 'Owner';
+                const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+
+                if (!isUserAdmin && isAdminRoute) {
                   navigate('/access-denied', { replace: true });
-                } else if (me.role === 'Owner' && !location.pathname.startsWith('/owner')) {
-                  navigate('/owner', { replace: true });
+                } else if (isUserAdmin && !isAdminRoute) {
+                  navigate('/admin', { replace: true });
                 }
               }
             })
@@ -76,16 +82,18 @@ export const AppShell: React.FC<AppShellProps> = ({
         if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
           const token = getAuthToken();
           if (!token) {
-            navigate('/sign-in', { replace: true });
+            const isTargetAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+            navigate(isTargetAdmin ? '/admin' : '/sign-in', { replace: true });
           }
         }
       });
   }, [location.pathname, navigate, userName, userEmail]);
 
-  // If path starts with /owner, force role="Owner"
-  const activeRole: 'Owner' | 'Client' = location.pathname.startsWith('/owner')
-    ? 'Owner'
-    : role;
+  // If path starts with /admin or /owner, force role="Admin"
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/owner');
+  const activeRole: 'Admin' | 'Client' = isAdminRoute || role === 'Admin' || role === 'Owner'
+    ? 'Admin'
+    : 'Client';
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--text)] flex flex-col font-sans antialiased">
@@ -131,7 +139,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 outline-none"
           >
             <div className="max-w-7xl mx-auto w-full">
-              <Outlet />
+              {children || <Outlet />}
             </div>
           </main>
 

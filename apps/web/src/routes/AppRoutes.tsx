@@ -5,11 +5,14 @@ import { AppShell } from '../layouts/AppShell';
 // Auth Pages (Screens 01 - 05 + Status Pages)
 import { SignInPage } from '../features/auth/pages/SignInPage';
 import { SignUpPage } from '../features/auth/pages/SignUpPage';
+import { AdminLoginPage } from '../features/auth/pages/AdminLoginPage';
 import { ForgotPasswordPage } from '../features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
 import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage';
 import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage';
 import { AccessDeniedPage } from '../features/auth/pages/AccessDeniedPage';
+import { getAuthToken } from '../services/api-client';
+import { loadClerk } from '../services/clerk-client';
 
 // Client Portal Pages (Screens 06 - 18)
 import { OverviewPage } from '../features/dashboard/pages/OverviewPage';
@@ -41,10 +44,51 @@ import { OwnerMeetingsPage } from '../features/owner/pages/OwnerMeetingsPage';
 import { NotFoundPage } from '../components/feedback/NotFoundPage';
 import { ForbiddenPage } from '../components/feedback/ForbiddenPage';
 
+const AdminGatewayRoute: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(() => {
+    const token = getAuthToken();
+    return token ? true : null;
+  });
+
+  React.useEffect(() => {
+    loadClerk()
+      .then((clerk) => {
+        const token = getAuthToken();
+        if (clerk?.user || token) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      })
+      .catch(() => {
+        const token = getAuthToken();
+        setIsAuthenticated(Boolean(token));
+      });
+  }, []);
+
+  if (isAuthenticated === null) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--canvas)' }}>
+        <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AdminLoginPage />;
+  }
+
+  return (
+    <AppShell role="Admin">
+      <OwnerDashboardPage />
+    </AppShell>
+  );
+};
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Auth Routes */}
+      {/* Public Client Auth Routes */}
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/sign-up" element={<SignUpPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -53,6 +97,10 @@ export const AppRoutes: React.FC = () => {
       <Route path="/pending-approval" element={<PendingApprovalPage />} />
       <Route path="/access-denied" element={<AccessDeniedPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
+
+      {/* Dedicated Admin Portal Routes */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin" element={<AdminGatewayRoute />} />
 
       {/* Authenticated Client Shell Routes */}
       <Route element={<AppShell role="Client" />}>
@@ -72,19 +120,31 @@ export const AppRoutes: React.FC = () => {
         <Route path="/no-project" element={<NoActiveProjectPage />} />
       </Route>
 
-      {/* Authenticated Owner Shell Routes */}
-      <Route element={<AppShell role="Owner" />}>
-        <Route path="/owner" element={<OwnerDashboardPage />} />
-        <Route path="/owner/clients" element={<OwnerClientsPage />} />
-        <Route path="/owner/projects" element={<OwnerProjectsPage />} />
-        <Route path="/owner/projects/:projectId" element={<OwnerProjectDetailPage />} />
-        <Route path="/owner/files" element={<OwnerFilesPage />} />
-        <Route path="/owner/messages" element={<OwnerMessagesPage />} />
-        <Route path="/owner/invoices" element={<OwnerInvoicesPage />} />
-        <Route path="/owner/support" element={<OwnerSupportPage />} />
-        <Route path="/owner/meetings" element={<OwnerMeetingsPage />} />
-        <Route path="/owner/notifications" element={<NotificationsPage />} />
+      {/* Authenticated Admin Management Suite Routes */}
+      <Route element={<AppShell role="Admin" />}>
+        <Route path="/admin/clients" element={<OwnerClientsPage />} />
+        <Route path="/admin/projects" element={<OwnerProjectsPage />} />
+        <Route path="/admin/projects/:projectId" element={<OwnerProjectDetailPage />} />
+        <Route path="/admin/files" element={<OwnerFilesPage />} />
+        <Route path="/admin/messages" element={<OwnerMessagesPage />} />
+        <Route path="/admin/invoices" element={<OwnerInvoicesPage />} />
+        <Route path="/admin/support" element={<OwnerSupportPage />} />
+        <Route path="/admin/meetings" element={<OwnerMeetingsPage />} />
+        <Route path="/admin/notifications" element={<NotificationsPage />} />
       </Route>
+
+      {/* Legacy /owner Redirects for Backward Compatibility */}
+      <Route path="/owner" element={<Navigate to="/admin" replace />} />
+      <Route path="/owner/clients" element={<Navigate to="/admin/clients" replace />} />
+      <Route path="/owner/projects" element={<Navigate to="/admin/projects" replace />} />
+      <Route path="/owner/projects/:projectId" element={<Navigate to="/admin/projects/:projectId" replace />} />
+      <Route path="/owner/files" element={<Navigate to="/admin/files" replace />} />
+      <Route path="/owner/messages" element={<Navigate to="/admin/messages" replace />} />
+      <Route path="/owner/invoices" element={<Navigate to="/admin/invoices" replace />} />
+      <Route path="/owner/support" element={<Navigate to="/admin/support" replace />} />
+      <Route path="/owner/meetings" element={<Navigate to="/admin/meetings" replace />} />
+      <Route path="/owner/notifications" element={<Navigate to="/admin/notifications" replace />} />
+      <Route path="/owner/*" element={<Navigate to="/admin" replace />} />
 
       {/* 404 Catch-All in Shell */}
       <Route element={<AppShell role="Client" />}>

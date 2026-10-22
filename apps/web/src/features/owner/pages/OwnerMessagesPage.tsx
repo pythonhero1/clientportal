@@ -45,7 +45,7 @@ export const OwnerMessagesPage: React.FC = () => {
             <h1 className="text-xl font-bold tracking-tight text-[var(--text)]">
               Messages & Channel Management
             </h1>
-            <Badge variant="accent" size="sm">Owner Suite</Badge>
+            <Badge variant="accent" size="sm">Admin Suite</Badge>
           </div>
           <p className="text-xs text-[var(--muted-text)] mt-0.5">
             Cross-client messaging oversight, direct client communication, and group channel control.

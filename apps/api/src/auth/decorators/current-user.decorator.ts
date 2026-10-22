@@ -5,7 +5,7 @@ export interface AuthenticatedUser {
   clerkUserId: string;
   email: string;
   name: string | null;
-  role: 'Owner' | 'Client';
+  role: 'Admin' | 'Owner' | 'Client';
   status: 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
   mfaEnforced: boolean;
 }
