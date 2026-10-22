@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 
-// Initialize Clerk if publishable key is present
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+// Initialize Clerk with official publishable key
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_YW11c2VkLWNyYXdkYWQtMTg0NS5jbGVyay5hY2NvdW50cy5kZXYk';
 if (clerkPubKey && typeof window !== 'undefined') {
   const existingScript = document.querySelector('script[data-clerk-publishable-key]');
   if (!existingScript) {
