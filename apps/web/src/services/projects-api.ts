@@ -52,18 +52,19 @@ export function setActivePersona(key: string) {
 }
 
 export function getAuthHeaders(): HeadersInit {
-  const persona = getActivePersona();
   const token = typeof window !== 'undefined' ? localStorage.getItem('portal_auth_token') : null;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'x-mock-user-id': persona.id,
-    'x-mock-role': persona.role,
-    'x-mock-status': 'ACTIVE',
-    'x-mock-mfa': persona.hasMfa ? 'true' : 'false',
-    'x-mock-billing-contact': persona.id === 'client_c' ? 'false' : 'true',
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    const persona = getActivePersona();
+    headers['x-mock-user-id'] = persona.id;
+    headers['x-mock-role'] = persona.role;
+    headers['x-mock-status'] = 'ACTIVE';
+    headers['x-mock-mfa'] = persona.hasMfa ? 'true' : 'false';
+    headers['x-mock-billing-contact'] = persona.id === 'client_c' ? 'false' : 'true';
   }
   return headers;
 }

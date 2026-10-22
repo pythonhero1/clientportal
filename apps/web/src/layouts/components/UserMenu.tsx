@@ -5,6 +5,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Sun, Moon, Monitor, LogOut, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
+import { loadClerk } from '../../services/clerk-client';
+
 export interface UserMenuProps {
   name?: string;
   email?: string;
@@ -13,7 +15,7 @@ export interface UserMenuProps {
 
 export const UserMenu: React.FC<UserMenuProps> = ({
   name = 'Stephen Oderinde',
-  email = 'stephen@oderindestephen.com',
+  email = 'stephenoderinde@gmail.com',
   role = 'Owner',
 }) => {
   const { theme, setTheme } = useTheme();
@@ -25,7 +27,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     .join('')
     .toUpperCase();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      const clerk = await loadClerk();
+      if (clerk) {
+        await clerk.signOut();
+      }
+    } catch {}
+    localStorage.removeItem('portal_auth_token');
     window.location.href = '/sign-in';
   };
 

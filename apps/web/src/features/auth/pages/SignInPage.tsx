@@ -216,7 +216,6 @@ export const SignInPage: React.FC = () => {
                 autoComplete="one-time-code"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
-                placeholder="123456"
                 required
                 autoFocus
                 style={{ ...inputStyle, letterSpacing: '0.2em', fontSize: '1.25rem', textAlign: 'center' }}
@@ -250,7 +249,6 @@ export const SignInPage: React.FC = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
                 required
                 style={inputStyle}
               />
@@ -265,7 +263,6 @@ export const SignInPage: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
                 required
                 style={inputStyle}
               />

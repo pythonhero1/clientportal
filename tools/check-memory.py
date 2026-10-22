@@ -28,7 +28,7 @@ PREFIX = {"corrections": "C", "decisions": "D", "patterns": "P"}
 SEAL = "<!-- SEALED. Continues in memory/"
 MOJIBAKE = ("\u00c2\u00b7", "\u00e2\u0080", "\u00c3\u00a9", "\u00c2\u00a0")
 CITERS = ("AGENTS.md", ".agents/rules", "plans", "handoff", "docs/analysis")
-MARKERS = ("FILL:", "PROJECT_NAME", "OWNER")
+MARKERS = ("FILL:", "PROJECT_NAME", "<OWNER>")
 SKIP_MARKER_FILES = ("SETUP.md", "BOOTSTRAP-PROMPT.md", "ANALYSIS-PROMPT.md")
 
 fails = []

@@ -52,13 +52,15 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Attach mock headers for offline/preview persona support
-  const activePersonaKey = typeof window !== 'undefined' ? (localStorage.getItem('portal_dev_user') || 'client_a') : 'client_a';
-  headers.set('x-mock-user-id', activePersonaKey);
-  headers.set('x-mock-role', activePersonaKey === 'owner' ? 'Owner' : 'Client');
-  headers.set('x-mock-status', 'ACTIVE');
-  headers.set('x-mock-mfa', activePersonaKey === 'owner' ? 'true' : 'false');
-  headers.set('x-mock-billing-contact', activePersonaKey === 'client_c' ? 'false' : 'true');
+  // Attach mock headers ONLY if unauthenticated in local development
+  if (!token && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    const activePersonaKey = localStorage.getItem('portal_dev_user') || 'owner';
+    headers.set('x-mock-user-id', activePersonaKey);
+    headers.set('x-mock-role', activePersonaKey === 'owner' ? 'Owner' : 'Client');
+    headers.set('x-mock-status', 'ACTIVE');
+    headers.set('x-mock-mfa', activePersonaKey === 'owner' ? 'true' : 'false');
+    headers.set('x-mock-billing-contact', activePersonaKey === 'client_c' ? 'false' : 'true');
+  }
 
   const res = await fetch(url, {
     ...options,

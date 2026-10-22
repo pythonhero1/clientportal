@@ -15,29 +15,44 @@ export interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({
   role = 'Client',
   userName = 'Stephen Oderinde',
-  userEmail = 'stephen@oderindestephen.com',
+  userEmail = 'stephenoderinde@gmail.com',
 }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState({ name: userName, email: userEmail });
   const location = useLocation();
   const navigate = useNavigate();
 
   // Authentication guard: in production, require valid Clerk session or token
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      const token = getAuthToken();
-      loadClerk()
-        .then((clerk) => {
+    loadClerk()
+      .then((clerk) => {
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          const token = getAuthToken();
           if (clerk && clerk.loaded && !clerk.user && !token) {
             navigate('/sign-in', { replace: true });
+            return;
           }
-        })
-        .catch(() => {
+        }
+        if (clerk?.user) {
+          const email =
+            clerk.user.primaryEmailAddress?.emailAddress ||
+            clerk.user.emailAddresses?.[0]?.emailAddress ||
+            userEmail;
+          const name =
+            clerk.user.fullName ||
+            (clerk.user.firstName ? `${clerk.user.firstName} ${clerk.user.lastName || ''}`.trim() : userName);
+          setCurrentUser({ name, email });
+        }
+      })
+      .catch(() => {
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          const token = getAuthToken();
           if (!token) {
             navigate('/sign-in', { replace: true });
           }
-        });
-    }
-  }, [location.pathname, navigate]);
+        }
+      });
+  }, [location.pathname, navigate, userName, userEmail]);
 
   // If path starts with /owner, force role="Owner"
   const activeRole: 'Owner' | 'Client' = location.pathname.startsWith('/owner')
@@ -77,8 +92,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           <TopBar
             onOpenMobileNav={() => setMobileNavOpen(true)}
             role={activeRole}
-            userName={userName}
-            userEmail={userEmail}
+            userName={currentUser.name}
+            userEmail={currentUser.email}
           />
 
           {/* Main Scrollable View */}

@@ -89,7 +89,6 @@ export const SignUpPage: React.FC = () => {
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="John Doe"
             required
             style={inputStyle}
           />
@@ -104,7 +103,6 @@ export const SignUpPage: React.FC = () => {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@company.com"
             required
             style={inputStyle}
           />
@@ -119,7 +117,6 @@ export const SignUpPage: React.FC = () => {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 characters"
             minLength={8}
             required
             style={inputStyle}
